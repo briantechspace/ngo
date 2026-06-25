@@ -36,15 +36,35 @@
           <li><a href="/">Home</a></li>
           <li><a href="/about.html">About Us</a></li>
           <li><a href="/blogs.html">Blogs</a></li>
-          <li><a href="/admin.html" class="active">Admin Portal</a></li>
           <li><a href="/#donate" class="btn btn-accent btn-sm" style="color: white; margin-left: 10px;">Donate Now</a></li>
         </ul>
       </nav>
     </div>
   </header>
 
-  <!-- Admin Dashboard Page Wrapper -->
-  <main id="admin-dashboard-container" class="admin-page">
+  <!-- Admin Login Container -->
+  <div id="admin-login-container" style="display: flex; align-items: center; justify-content: center; min-height: calc(100vh - var(--header-height)); padding: 40px 24px; background: linear-gradient(135deg, rgba(231, 241, 255, 0.3) 0%, rgba(232, 245, 233, 0.3) 100%);">
+    <div class="glass-card" style="width: 100%; max-width: 400px; padding: 40px 32px; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); text-align: center;">
+      <div style="width: 64px; height: 64px; border-radius: 50%; background-color: var(--color-blue-light); color: var(--color-blue-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px auto; font-size: 24px;">🔑</div>
+      <h2 style="font-size: 24px; margin-bottom: 8px;">Admin Login</h2>
+      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 28px;">Authenticate to access the administrative dashboard.</p>
+      
+      <form id="admin-login-form" style="text-align: left;">
+        <div class="form-group">
+          <label for="login-username">Username</label>
+          <input type="text" id="login-username" class="form-control" placeholder="Enter username" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 24px;">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" class="form-control" placeholder="Enter password" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Access Portal</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Admin Dashboard Page Wrapper (Hidden by default) -->
+  <main id="admin-dashboard-container" class="admin-page" style="display: none;">
     <div class="container">
       
       <!-- Top header -->
@@ -53,6 +73,7 @@
           <h1>Admin Control Panel</h1>
           <p class="text-muted">Manage blog publications, inspect support submissions, and verify donation logs.</p>
         </div>
+        <button id="admin-logout-btn" class="btn btn-outline btn-sm">Log Out</button>
       </div>
       
       <!-- Stats Counters Grid -->
@@ -211,7 +232,6 @@
           <li><a href="/about.html">About Our Vision</a></li>
           <li><a href="/blogs.html">Stories & News</a></li>
           <li><a href="/#support">Inquire & Contact</a></li>
-          <li><a href="/admin.html">Dashboard Portal</a></li>
         </ul>
       </div>
       

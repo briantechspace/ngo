@@ -3,6 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 const https = require('https');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const db = require('./db');
@@ -20,6 +21,47 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 // Support serving uploaded images locally if Cloudinary is not used
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+
+// --- Auth Session Token Verification Helpers (Built-in Crypto) ---
+function generateToken() {
+  const payload = JSON.stringify({ user: 'admin', exp: Date.now() + 24 * 60 * 60 * 1000 });
+  const signature = crypto.createHmac('sha256', process.env.JWT_SECRET || 'fallback_secret_session_key')
+    .update(payload)
+    .digest('hex');
+  return Buffer.from(payload).toString('base64') + '.' + signature;
+}
+
+function verifyToken(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 2) return false;
+    const payload = Buffer.from(parts[0], 'base64').toString();
+    const signature = parts[1];
+    const expectedSignature = crypto.createHmac('sha256', process.env.JWT_SECRET || 'fallback_secret_session_key')
+      .update(payload)
+      .digest('hex');
+    if (signature !== expectedSignature) return false;
+    const parsed = JSON.parse(payload);
+    if (Date.now() > parsed.exp) return false;
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Middleware to protect admin routes
+function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Authentication token required.' });
+  }
+  const token = authHeader.split(' ')[1];
+  if (verifyToken(token)) {
+    next();
+  } else {
+    res.status(401).json({ success: false, message: 'Invalid or expired session token.' });
+  }
+}
 
 // --- Paystack Verification Helper ---
 function verifyPaystackPayment(reference) {
@@ -78,6 +120,20 @@ function verifyPaystackPayment(reference) {
 
 // --- API ENDPOINTS ---
 
+// Admin Login Endpoint
+app.post('/api/admin/login', (req, res) => {
+  const { username, password } = req.body;
+  const correctUser = process.env.ADMIN_USERNAME || 'admin';
+  const correctPass = process.env.ADMIN_PASSWORD || 'eco_admin_2026';
+
+  if (username === correctUser && password === correctPass) {
+    const token = generateToken();
+    res.json({ success: true, token });
+  } else {
+    res.status(401).json({ success: false, message: 'Invalid username or password.' });
+  }
+});
+
 // 1. PUBLIC: Fetch Paystack Public Key
 app.get('/api/config/paystack', (req, res) => {
   const publicKey = process.env.PAYSTACK_PUBLIC_KEY;
@@ -115,7 +171,7 @@ app.get('/api/blogs/:slug', async (req, res) => {
 });
 
 // 4. BLOGS: Upload image & create new blog post (Admin protected ideally)
-app.post('/api/blogs', upload.single('image'), async (req, res) => {
+app.post('/api/blogs', authMiddleware, upload.single('image'), async (req, res) => {
   try {
     const { title, body } = req.body;
     
@@ -205,7 +261,7 @@ app.post('/api/donate/verify', async (req, res) => {
 });
 
 // 7. ADMIN: Retrieve dashboard stats
-app.get('/api/admin/stats', async (req, res) => {
+app.get('/api/admin/stats', authMiddleware, async (req, res) => {
   try {
     const stats = await db.getDashboardStats();
     res.json({ success: true, stats });
@@ -216,7 +272,7 @@ app.get('/api/admin/stats', async (req, res) => {
 });
 
 // 8. ADMIN: Retrieve support messages log
-app.get('/api/admin/messages', async (req, res) => {
+app.get('/api/admin/messages', authMiddleware, async (req, res) => {
   try {
     const messages = await db.getSupportMessages();
     res.json({ success: true, count: messages.length, messages });
@@ -227,7 +283,7 @@ app.get('/api/admin/messages', async (req, res) => {
 });
 
 // 9. ADMIN: Retrieve donations history
-app.get('/api/admin/donations', async (req, res) => {
+app.get('/api/admin/donations', authMiddleware, async (req, res) => {
   try {
     const donations = await db.getDonations();
     res.json({ success: true, count: donations.length, donations });
