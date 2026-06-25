@@ -14,12 +14,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const navLinks = document.querySelector('.nav-links');
 
   if (hamburger && navLinks) {
+    // Create backdrop overlay element dynamically
+    const overlay = document.createElement('div');
+    overlay.className = 'nav-overlay';
+    document.body.appendChild(overlay);
+
+    const closeMobileMenu = () => {
+      navLinks.classList.remove('open');
+      overlay.classList.remove('active');
+      const lines = hamburger.querySelectorAll('span');
+      lines[0].style.transform = 'none';
+      lines[1].style.opacity = '1';
+      lines[2].style.transform = 'none';
+    };
+
     hamburger.addEventListener('click', () => {
-      navLinks.classList.toggle('open');
+      const isOpen = navLinks.classList.toggle('open');
+      overlay.classList.toggle('active', isOpen);
       
       // Animate hamburger lines
       const lines = hamburger.querySelectorAll('span');
-      if (navLinks.classList.contains('open')) {
+      if (isOpen) {
         lines[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
         lines[1].style.opacity = '0';
         lines[2].style.transform = 'rotate(-45deg) translate(7px, -7px)';
@@ -30,15 +45,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // Close menu when clicking outside (on overlay)
+    overlay.addEventListener('click', closeMobileMenu);
+
     // Close mobile menu when clicking a link
     document.querySelectorAll('.nav-links a').forEach(link => {
-      link.addEventListener('click', () => {
-        navLinks.classList.remove('open');
-        const lines = hamburger.querySelectorAll('span');
-        lines[0].style.transform = 'none';
-        lines[1].style.opacity = '1';
-        lines[2].style.transform = 'none';
-      });
+      link.addEventListener('click', closeMobileMenu);
     });
   }
 
