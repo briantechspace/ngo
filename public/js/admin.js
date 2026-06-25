@@ -1,10 +1,69 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const loginContainer = document.getElementById('admin-login-container');
+  const dashboardContainer = document.getElementById('admin-dashboard-container');
+  const loginForm = document.getElementById('admin-login-form');
+  const logoutBtn = document.getElementById('admin-logout-btn');
+
   // Check if we are on the admin page
-  const isAdminPage = document.getElementById('admin-dashboard-container') !== null;
+  const isAdminPage = dashboardContainer !== null;
   if (!isAdminPage) return;
 
-  // Initialize Dashboard Data
-  initDashboard();
+  // Session Routing
+  const token = localStorage.getItem('eco_admin_token');
+  if (token) {
+    verifySession(token);
+  } else {
+    showLogin();
+  }
+
+  // Handle Login Form Submission
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value.trim();
+      const submitBtn = loginForm.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerText;
+      
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Verifying credentials...';
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          localStorage.setItem('eco_admin_token', data.token);
+          showNotification('Login successful! Welcome to the portal.', 'success');
+          showDashboard();
+        } else {
+          showNotification(data.message || 'Invalid username or password.', 'error');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        showNotification('Connection error. Please check if server is active.', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = originalText;
+      }
+    });
+  }
+
+  // Handle Logout Button Click
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('eco_admin_token');
+      showNotification('You have logged out successfully.', 'info');
+      showLogin();
+    });
+  }
 
   // Tab Navigation Handling
   const tabs = document.querySelectorAll('.admin-tab-btn');
@@ -12,23 +71,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      // Deactivate all tabs
       tabs.forEach(t => t.classList.remove('active'));
       contents.forEach(c => c.classList.remove('active'));
 
-      // Activate selected tab
       tab.classList.add('active');
       const targetId = tab.dataset.tab;
       const targetContent = document.getElementById(targetId);
       if (targetContent) targetContent.classList.add('active');
 
-      // Re-fetch data if switching to logs
       if (targetId === 'tab-messages') loadSupportMessages();
       if (targetId === 'tab-donations') loadDonations();
     });
   });
 
-  // Blog Image Upload Preview helper
+  // Blog Image Upload Preview
   const imgInput = document.getElementById('blog-image-input');
   const imgPreview = document.getElementById('blog-image-preview');
   const previewContainer = document.querySelector('.image-preview-container');
@@ -41,7 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.onload = (e) => {
           imgPreview.src = e.target.result;
           imgPreview.style.display = 'block';
-          
           const placeholder = previewContainer.querySelector('.preview-placeholder');
           if (placeholder) placeholder.style.display = 'none';
         };
@@ -49,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         imgPreview.src = '';
         imgPreview.style.display = 'none';
-        
         const placeholder = previewContainer.querySelector('.preview-placeholder');
         if (placeholder) placeholder.style.display = 'block';
       }
@@ -68,19 +122,29 @@ document.addEventListener('DOMContentLoaded', () => {
       submitBtn.innerText = 'Uploading and Publishing...';
 
       const formData = new FormData(blogForm);
+      const token = localStorage.getItem('eco_admin_token');
 
       try {
         const res = await fetch('/api/blogs', {
           method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
           body: formData
         });
+        
+        if (res.status === 401) {
+          showNotification('Session expired. Please log in again.', 'error');
+          showLogin();
+          return;
+        }
+
         const data = await res.json();
 
         if (data.success) {
           showNotification('Blog post published successfully!', 'success');
           blogForm.reset();
           
-          // Clear image preview
           if (imgPreview) {
             imgPreview.src = '';
             imgPreview.style.display = 'none';
@@ -88,7 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (placeholder) placeholder.style.display = 'block';
           }
 
-          // Reload Stats
           loadDashboardStats();
         } else {
           showNotification(data.message || 'Failed to create blog.', 'error');
@@ -104,11 +167,59 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Initialize dashboard contents
-async function initDashboard() {
-  await loadDashboardStats();
-  await loadSupportMessages();
-  await loadDonations();
+// Helper: Show Login Card
+function showLogin() {
+  const loginContainer = document.getElementById('admin-login-container');
+  const dashboardContainer = document.getElementById('admin-dashboard-container');
+  
+  if (loginContainer) loginContainer.style.display = 'flex';
+  if (dashboardContainer) dashboardContainer.style.display = 'none';
+}
+
+// Helper: Show Dashboard Panel
+function showDashboard() {
+  const loginContainer = document.getElementById('admin-login-container');
+  const dashboardContainer = document.getElementById('admin-dashboard-container');
+  
+  if (loginContainer) loginContainer.style.display = 'none';
+  if (dashboardContainer) {
+    dashboardContainer.style.display = 'block';
+    
+    // Load fresh data
+    loadDashboardStats();
+    loadSupportMessages();
+    loadDonations();
+  }
+}
+
+// Helper: Verify token with backend stats API
+async function verifySession(token) {
+  try {
+    const res = await fetch('/api/admin/stats', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (res.ok) {
+      showDashboard();
+    } else {
+      localStorage.removeItem('eco_admin_token');
+      showLogin();
+    }
+  } catch (error) {
+    console.error('Session validation connection issue:', error);
+    // Keep local layout intact but warn
+    showLogin();
+  }
+}
+
+// Helper: Get Authorization Header object
+function getAuthHeaders() {
+  const token = localStorage.getItem('eco_admin_token');
+  return {
+    'Authorization': `Bearer ${token}`
+  };
 }
 
 // 1. Fetch Dashboard Stats
@@ -119,7 +230,15 @@ async function loadDashboardStats() {
   const sumDonations = document.getElementById('stat-donations-sum');
 
   try {
-    const res = await fetch('/api/admin/stats');
+    const res = await fetch('/api/admin/stats', {
+      headers: getAuthHeaders()
+    });
+
+    if (res.status === 401) {
+      showLogin();
+      return;
+    }
+
     const data = await res.json();
 
     if (data.success) {
@@ -129,7 +248,6 @@ async function loadDashboardStats() {
       if (countDonations) countDonations.innerText = stats.donationsCount;
       
       if (sumDonations) {
-        // Format as Currency (e.g. NGN ₦)
         const formattedAmount = new Intl.NumberFormat('en-NG', {
           style: 'currency',
           currency: 'NGN',
@@ -149,7 +267,15 @@ async function loadSupportMessages() {
   if (!tbody) return;
 
   try {
-    const res = await fetch('/api/admin/messages');
+    const res = await fetch('/api/admin/messages', {
+      headers: getAuthHeaders()
+    });
+
+    if (res.status === 401) {
+      showLogin();
+      return;
+    }
+
     const data = await res.json();
 
     if (data.success) {
@@ -183,7 +309,15 @@ async function loadDonations() {
   if (!tbody) return;
 
   try {
-    const res = await fetch('/api/admin/donations');
+    const res = await fetch('/api/admin/donations', {
+      headers: getAuthHeaders()
+    });
+
+    if (res.status === 401) {
+      showLogin();
+      return;
+    }
+
     const data = await res.json();
 
     if (data.success) {
@@ -196,7 +330,6 @@ async function loadDonations() {
       data.donations.forEach(don => {
         const row = document.createElement('tr');
         
-        // Format donation amount
         const formattedAmount = new Intl.NumberFormat('en-NG', {
           style: 'currency',
           currency: 'NGN',
