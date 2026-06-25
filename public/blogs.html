@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog & Stories | EcoEmpower NGO</title>
+  <meta name="description" content="Browse articles on women empowerment cooperatives, climate change policies, local green drives, and sustainability success stories.">
+  
+  <!-- Style Sheets -->
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/blogs.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="container header-container">
+      <a href="/" class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="11" stroke="#dc3545" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <path d="M12 3C8 6.5 8 13.5 12 18C16 13.5 16 6.5 12 3Z" fill="#198754" fill-opacity="0.8"/>
+          <path d="M4 14C6 17 9 20 12 20C15 20 18 17 20 14" stroke="#0d6efd" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div class="logo-text">
+          Eco<span>Empower</span>
+          <small>Women & Climate</small>
+        </div>
+      </a>
+      
+      <nav>
+        <button class="hamburger" aria-label="Toggle Navigation">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <ul class="nav-links">
+          <li><a href="/">Home</a></li>
+          <li><a href="/about.html">About Us</a></li>
+          <li><a href="/blogs.html" class="active">Blogs</a></li>
+          <li><a href="/admin.html">Admin Portal</a></li>
+          <li><a href="/#donate" class="btn btn-accent btn-sm" style="color: white; margin-left: 10px;">Donate Now</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Blogs Control Header -->
+  <section class="blogs-page">
+    <div class="container">
+      
+      <div class="blogs-control-row">
+        <div>
+          <h1 style="font-size: 38px; margin-bottom: 8px;">Our Blog & Stories</h1>
+          <p class="text-muted" style="font-size: 15px;">Explore field updates, advocacy reports, and stories of community green initiatives.</p>
+        </div>
+        
+        <!-- Blog Search Form -->
+        <form id="blogs-search-form" class="search-container">
+          <input type="text" id="blogs-search-input" class="search-input" placeholder="Search blogs by title or body...">
+          <button type="submit" class="search-btn" aria-label="Search Submit">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </button>
+        </form>
+      </div>
+
+      <!-- Search results status banner -->
+      <p id="results-info-text" class="search-results-info" style="display: none; margin-bottom: 30px;"></p>
+
+      <!-- Blogs Cards Container Grid -->
+      <div class="grid grid-3" id="blogs-grid-container">
+        <!-- Injected via blogs.js -->
+        <p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">Loading articles...</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container grid grid-4 footer-grid">
+      <div class="footer-info">
+        <a href="/" class="logo">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="11" stroke="#dc3545" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <path d="M12 3C8 6.5 8 13.5 12 18C16 13.5 16 6.5 12 3Z" fill="#198754" fill-opacity="0.8"/>
+            <path d="M4 14C6 17 9 20 12 20C15 20 18 17 20 14" stroke="#0d6efd" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <div class="logo-text" style="color: white;">
+            Eco<span>Empower</span>
+          </div>
+        </a>
+        <p>Empowering women to build sustainable agroforestry, clean energy grids, and climate-resilient futures.</p>
+      </div>
+      
+      <div class="footer-links">
+        <h4>NGO Initiatives</h4>
+        <ul>
+          <li><a href="/about.html">Women Cooperatives</a></li>
+          <li><a href="/about.html">Regenerative Farming</a></li>
+          <li><a href="/about.html">Solar Grids Deployment</a></li>
+          <li><a href="/about.html">Reforestation Networks</a></li>
+        </ul>
+      </div>
+      
+      <div class="footer-links">
+        <h4>Quick Menu</h4>
+        <ul>
+          <li><a href="/about.html">About Our Vision</a></li>
+          <li><a href="/blogs.html">Stories & News</a></li>
+          <li><a href="/#support">Inquire & Contact</a></li>
+          <li><a href="/admin.html">Dashboard Portal</a></li>
+        </ul>
+      </div>
+      
+      <div class="footer-newsletter">
+        <h4>Subscribe to Newsletter</h4>
+        <p>Receive monthly reports on project milestones, green tips, and volunteer calls.</p>
+        <form class="newsletter-form" onsubmit="event.preventDefault(); showNotification('Subscribed successfully!', 'success'); this.reset();">
+          <input type="email" class="form-control" placeholder="your.email@example.com" required>
+          <button type="submit" class="btn btn-primary btn-sm">Join</button>
+        </form>
+      </div>
+    </div>
+    
+    <div class="footer-bottom">
+      <div class="container">
+        &copy; 2026 EcoEmpower NGO. All Rights Reserved. Designed with Care.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/js/main.js"></script>
+  <script src="/js/blogs.js"></script>
+</body>
+</html>

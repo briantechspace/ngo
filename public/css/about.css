@@ -1,0 +1,211 @@
+/* About Header Section */
+.about-hero {
+  padding: calc(var(--header-height) + 40px) 0 60px 0;
+  background: linear-gradient(135deg, rgba(231, 241, 255, 0.3) 0%, rgba(232, 245, 233, 0.3) 100%);
+  text-align: center;
+}
+
+.about-hero h1 {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.about-hero p {
+  color: var(--text-muted);
+  max-width: 600px;
+  margin: 0 auto;
+  font-size: 18px;
+}
+
+/* Story Section */
+.about-story {
+  padding: 80px 0;
+  background-color: var(--bg-secondary);
+}
+
+.story-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.story-content h2 {
+  font-size: 36px;
+  margin-bottom: 24px;
+}
+
+.story-content p {
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.story-img-wrapper {
+  position: relative;
+}
+
+.story-img {
+  width: 100%;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 768px) {
+  .story-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+
+/* Mission & Vision Section */
+.mission-vision {
+  padding: 80px 0;
+  background-color: var(--bg-primary);
+}
+
+.mission-vision-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 32px;
+}
+
+.mv-card {
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  transition: var(--transition-smooth);
+}
+
+.mv-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.mv-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  margin-bottom: 24px;
+}
+
+.mv-card.mission .mv-icon {
+  background-color: var(--color-blue-light);
+  color: var(--color-blue-primary);
+}
+
+.mv-card.vision .mv-icon {
+  background-color: var(--color-green-light);
+  color: var(--color-green-primary);
+}
+
+.mv-card h3 {
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+.mv-card p {
+  color: var(--text-muted);
+  flex-grow: 1;
+}
+
+@media (max-width: 768px) {
+  .mission-vision-grid {
+    grid-template-columns: 1fr;
+  }
+  .mv-card {
+    padding: 30px;
+  }
+}
+
+/* FAQ Accordion Section */
+.faq-section {
+  padding: 80px 0;
+  background-color: var(--bg-secondary);
+}
+
+.faq-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.faq-item {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background-color: var(--bg-primary);
+  overflow: hidden;
+  transition: var(--transition-smooth);
+}
+
+.faq-item.active {
+  border-color: var(--color-blue-primary);
+  background-color: var(--bg-secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.faq-header {
+  width: 100%;
+  padding: 20px 24px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-dark);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.faq-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
+  color: var(--text-muted);
+}
+
+.faq-item.active .faq-icon {
+  transform: rotate(180deg);
+  color: var(--color-blue-primary);
+}
+
+.faq-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.faq-body-content {
+  padding: 0 24px 20px 24px;
+  font-size: 15px;
+  color: var(--text-muted);
+  border-top: 1px solid transparent;
+}
+
+.faq-item.active .faq-body {
+  max-height: 300px; /* arbitrary max height to allow smooth transition */
+}
+
+.faq-item.active .faq-body-content {
+  border-top-color: rgba(226, 232, 240, 0.6);
+}

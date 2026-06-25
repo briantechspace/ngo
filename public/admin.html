@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | EcoEmpower NGO</title>
+  
+  <!-- Style Sheets -->
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="container header-container">
+      <a href="/" class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="11" stroke="#dc3545" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <path d="M12 3C8 6.5 8 13.5 12 18C16 13.5 16 6.5 12 3Z" fill="#198754" fill-opacity="0.8"/>
+          <path d="M4 14C6 17 9 20 12 20C15 20 18 17 20 14" stroke="#0d6efd" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div class="logo-text">
+          Eco<span>Empower</span>
+          <small>Women & Climate</small>
+        </div>
+      </a>
+      
+      <nav>
+        <button class="hamburger" aria-label="Toggle Navigation">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <ul class="nav-links">
+          <li><a href="/">Home</a></li>
+          <li><a href="/about.html">About Us</a></li>
+          <li><a href="/blogs.html">Blogs</a></li>
+          <li><a href="/admin.html" class="active">Admin Portal</a></li>
+          <li><a href="/#donate" class="btn btn-accent btn-sm" style="color: white; margin-left: 10px;">Donate Now</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Admin Dashboard Page Wrapper -->
+  <main id="admin-dashboard-container" class="admin-page">
+    <div class="container">
+      
+      <!-- Top header -->
+      <div class="admin-header">
+        <div>
+          <h1>Admin Control Panel</h1>
+          <p class="text-muted">Manage blog publications, inspect support submissions, and verify donation logs.</p>
+        </div>
+      </div>
+      
+      <!-- Stats Counters Grid -->
+      <div class="stats-row">
+        <!-- Stat 1: Total Raised -->
+        <div class="stat-card">
+          <div class="stat-card-icon">₦</div>
+          <div class="stat-card-info">
+            <h4>Total Funds Raised</h4>
+            <p id="stat-donations-sum">₦0.00</p>
+          </div>
+        </div>
+        
+        <!-- Stat 2: Total Support Inquiries -->
+        <div class="stat-card">
+          <div class="stat-card-icon">✉</div>
+          <div class="stat-card-info">
+            <h4>Support Inquiries</h4>
+            <p id="stat-messages-count">0</p>
+          </div>
+        </div>
+        
+        <!-- Stat 3: Blog Posts -->
+        <div class="stat-card">
+          <div class="stat-card-icon">📝</div>
+          <div class="stat-card-info">
+            <h4>Blog Articles</h4>
+            <p id="stat-blogs-count">0</p>
+          </div>
+        </div>
+
+        <!-- Stat 4: Total Donations -->
+        <div class="stat-card">
+          <div class="stat-card-icon">♥</div>
+          <div class="stat-card-info">
+            <h4>Donation Hits</h4>
+            <p id="stat-donations-count">0</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Navigation buttons -->
+      <div class="admin-tabs">
+        <button class="admin-tab-btn active" data-tab="tab-messages">Support Inquiries</button>
+        <button class="admin-tab-btn" data-tab="tab-donations">Donations History</button>
+        <button class="admin-tab-btn" data-tab="tab-write-blog">Publish Blog Post</button>
+      </div>
+
+      <!-- Tab 1 Panel: Support Messages Log -->
+      <div id="tab-messages" class="tab-content active">
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Sender Name</th>
+                <th>Email Address</th>
+                <th>Phone Number</th>
+                <th>Inquiry / Message Body</th>
+                <th>Submitted Date</th>
+              </tr>
+            </thead>
+            <tbody id="admin-messages-tbody">
+              <!-- Dynamically populated via admin.js -->
+              <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading messages...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 2 Panel: Donations History Log -->
+      <div id="tab-donations" class="tab-content">
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Donor Name</th>
+                <th>Email Address</th>
+                <th>Amount</th>
+                <th>Transaction Reference</th>
+                <th>Status</th>
+                <th>Logged Date</th>
+              </tr>
+            </thead>
+            <tbody id="admin-donations-tbody">
+              <!-- Dynamically populated via admin.js -->
+              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading donations logs...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 3 Panel: Write and Upload Blog -->
+      <div id="tab-write-blog" class="tab-content">
+        <div class="blog-editor-card">
+          <h2>Create and Publish Article</h2>
+          
+          <form id="admin-blog-form">
+            <div class="form-group">
+              <label for="blog-title-input">Article Title</label>
+              <input type="text" class="form-control" id="blog-title-input" name="title" placeholder="e.g. Empowering Rural Women in Sustainable Energy" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="blog-image-input">Banner Image</label>
+              <input type="file" class="form-control" id="blog-image-input" name="image" accept="image/*">
+              <div class="image-preview-container">
+                <span class="preview-placeholder">Image preview will appear here once chosen.</span>
+                <img id="blog-image-preview" src="" alt="Thumbnail preview" class="image-preview-img">
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="blog-body-input">Article Content (Supports HTML paragraphs)</label>
+              <textarea class="form-control" id="blog-body-input" name="body" rows="12" placeholder="Write your post contents here. Use <p></p> for paragraphs, <h3></h3> for sections..." required></textarea>
+              <span class="body-editor-tip">Tip: You can use HTML tags to enrich the layout (e.g. &lt;p&gt;Paragraph&lt;/p&gt;, &lt;blockquote&gt;Quote&lt;/blockquote&gt;).</span>
+            </div>
+            
+            <button type="submit" class="btn btn-secondary">Publish Article</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container grid grid-4 footer-grid">
+      <div class="footer-info">
+        <a href="/" class="logo">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="11" stroke="#dc3545" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <path d="M12 3C8 6.5 8 13.5 12 18C16 13.5 16 6.5 12 3Z" fill="#198754" fill-opacity="0.8"/>
+            <path d="M4 14C6 17 9 20 12 20C15 20 18 17 20 14" stroke="#0d6efd" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <div class="logo-text" style="color: white;">
+            Eco<span>Empower</span>
+          </div>
+        </a>
+        <p>Empowering women to build sustainable agroforestry, clean energy grids, and climate-resilient futures.</p>
+      </div>
+      
+      <div class="footer-links">
+        <h4>NGO Initiatives</h4>
+        <ul>
+          <li><a href="/about.html">Women Cooperatives</a></li>
+          <li><a href="/about.html">Regenerative Farming</a></li>
+          <li><a href="/about.html">Solar Grids Deployment</a></li>
+          <li><a href="/about.html">Reforestation Networks</a></li>
+        </ul>
+      </div>
+      
+      <div class="footer-links">
+        <h4>Quick Menu</h4>
+        <ul>
+          <li><a href="/about.html">About Our Vision</a></li>
+          <li><a href="/blogs.html">Stories & News</a></li>
+          <li><a href="/#support">Inquire & Contact</a></li>
+          <li><a href="/admin.html">Dashboard Portal</a></li>
+        </ul>
+      </div>
+      
+      <div class="footer-newsletter">
+        <h4>Subscribe to Newsletter</h4>
+        <p>Receive monthly reports on project milestones, green tips, and volunteer calls.</p>
+        <form class="newsletter-form" onsubmit="event.preventDefault(); showNotification('Subscribed successfully!', 'success'); this.reset();">
+          <input type="email" class="form-control" placeholder="your.email@example.com" required>
+          <button type="submit" class="btn btn-primary btn-sm">Join</button>
+        </form>
+      </div>
+    </div>
+    
+    <div class="footer-bottom">
+      <div class="container">
+        &copy; 2026 EcoEmpower NGO. All Rights Reserved. Designed with Care.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/js/main.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

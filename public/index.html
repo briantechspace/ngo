@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoEmpower NGO | Women Empowerment & Climate Action</title>
+  <meta name="description" content="We empower women to lead sustainable environmental actions, restoring our climate and building resilient local communities. Join us in making a difference.">
+  
+  <!-- Style Sheets -->
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/home.css">
+  
+  <!-- Paystack inline SDK -->
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="container header-container">
+      <a href="/" class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Leaf & Hands emblem: Green leaf inside blue caring hands, with coral empowerment circle -->
+          <circle cx="12" cy="12" r="11" stroke="#dc3545" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <path d="M12 3C8 6.5 8 13.5 12 18C16 13.5 16 6.5 12 3Z" fill="#198754" fill-opacity="0.8"/>
+          <path d="M4 14C6 17 9 20 12 20C15 20 18 17 20 14" stroke="#0d6efd" stroke-width="2" stroke-linecap="round"/>
+          <path d="M7 11C9 13 11 15 12 15C13 15 15 13 17 11" stroke="#0d6efd" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <div class="logo-text">
+          Eco<span>Empower</span>
+          <small>Women & Climate</small>
+        </div>
+      </a>
+      
+      <nav>
+        <button class="hamburger" aria-label="Toggle Navigation">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <ul class="nav-links">
+          <li><a href="/" class="active">Home</a></li>
+          <li><a href="/about.html">About Us</a></li>
+          <li><a href="/blogs.html">Blogs</a></li>
+          <li><a href="/admin.html">Admin Portal</a></li>
+          <li><a href="#donate" class="btn btn-accent btn-sm" style="color: white; margin-left: 10px;">Donate Now</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container hero-container">
+      <div class="hero-content animate-fade">
+        <h1>Empowering <span class="red">Women</span>,<br>Restoring Our <span class="green">Climate</span>.</h1>
+        <p>We train local women in sustainable farming, forestry, and clean energies. By placing women at the center of climate mitigation, we foster community resilience and secure a greener tomorrow.</p>
+        <div class="hero-actions">
+          <a href="#donate" class="btn btn-primary">Support Our Work</a>
+          <a href="/about.html" class="btn btn-outline">Learn More</a>
+        </div>
+      </div>
+      <div class="hero-image-wrapper animate-fade" style="animation-delay: 0.2s;">
+        <img src="/images/hero_banner.png" alt="Women working in a community green garden" class="hero-image">
+        <div class="hero-badge">
+          <div class="hero-badge-icon">✓</div>
+          <div class="hero-badge-text">
+            <h4>Active Action</h4>
+            <p>10,000+ Saplings Planted</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Focus Areas -->
+  <section class="focus-areas">
+    <div class="container">
+      <div class="section-header">
+        <h2>Our Core Pillars</h2>
+        <p>Climate change and gender inequality are deeply linked. We tackle both challenges simultaneously through community-led action.</p>
+      </div>
+      
+      <div class="grid grid-2">
+        <!-- Pillars 1: Women Empowerment -->
+        <div class="focus-card women animate-fade">
+          <div class="focus-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </div>
+          <h3>Women Empowerment</h3>
+          <p>Providing skills in leadership, financial management, cooperative trade, and green technology. We support women in leading local clean enterprise cooperatives.</p>
+          <a href="/about.html" class="blog-card-link">See Impact Details →</a>
+        </div>
+        
+        <!-- Pillars 2: Climate Restoration -->
+        <div class="focus-card climate animate-fade" style="animation-delay: 0.1s;">
+          <div class="focus-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          </div>
+          <h3>Climate Action</h3>
+          <p>Reforesting water basins, deploying solar grids, training in regenerative farming, and educating communities in waste reduction and recycling.</p>
+          <a href="/about.html" class="blog-card-link">Explore Initiatives →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Donations & Partnerships -->
+  <section class="donation-section" id="donate">
+    <div class="container donation-grid">
+      <div class="donation-info">
+        <h2>Support the Movement</h2>
+        <p>Every contribution goes directly to training women, purchasing saplings, and deploying clean energy devices to community clusters. Help us scale our projects and create sustainable ecosystems.</p>
+        
+        <div class="donation-stats">
+          <div class="stat-item">
+            <h3 id="live-raised-sum">₦0.00</h3>
+            <p>Total Funds Logged</p>
+          </div>
+          <div class="stat-item" style="border-left: 2px solid var(--border-light); padding-left: 24px;">
+            <h3>100%</h3>
+            <p>Direct Project Funding</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Interactive Donation Box -->
+      <div class="donation-box">
+        <h3>Make a Secure Donation</h3>
+        <form id="donation-form">
+          <div class="form-group">
+            <label for="donor-name">Your Name (Optional)</label>
+            <input type="text" class="form-control" id="donor-name" placeholder="Anonymous Friend">
+          </div>
+          <div class="form-group">
+            <label for="donor-email">Your Email Address</label>
+            <input type="email" class="form-control" id="donor-email" placeholder="friend@example.com" required>
+          </div>
+          
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label>Select Donation Amount (NGN)</label>
+            <div class="amount-presets">
+              <button type="button" class="preset-btn" data-amount="2000">₦2K</button>
+              <button type="button" class="preset-btn" data-amount="5000">₦5K</button>
+              <button type="button" class="preset-btn" data-amount="10000">₦10K</button>
+              <button type="button" class="preset-btn" data-amount="25000">₦25K</button>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="custom-donation-amount">Or Enter Custom Amount (₦)</label>
+            <input type="number" class="form-control" id="custom-donation-amount" placeholder="Minimum 500" min="500" required>
+          </div>
+          
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+            Donate via Paystack
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- Recent Blogs Section -->
+  <section class="recent-blogs">
+    <div class="container">
+      <div class="blogs-header">
+        <div class="section-header">
+          <h2>Latest News & Articles</h2>
+          <p>Read about our ongoing green drives, field studies, and impact stories straight from local communities.</p>
+        </div>
+        <a href="/blogs.html" class="btn btn-outline">View All Articles</a>
+      </div>
+      
+      <div class="grid grid-3" id="recent-blogs-container">
+        <!-- Loaded dynamically via blogs.js -->
+        <p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">Loading articles...</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Support inquiry form -->
+  <section class="support-section" id="support">
+    <div class="container support-container">
+      <div class="support-details-card">
+        <div>
+          <h2>Get in Touch</h2>
+          <p>Have questions about partnerships, funding programs, or volunteering? Send us a message and our team will get right back to you.</p>
+        </div>
+        
+        <ul class="contact-info-list">
+          <li class="contact-info-item">
+            <div class="contact-info-icon">✉</div>
+            <div class="contact-info-text">
+              <h5>Email Us</h5>
+              <p>contact@ecoempower.org</p>
+            </div>
+          </li>
+          <li class="contact-info-item">
+            <div class="contact-info-icon">📞</div>
+            <div class="contact-info-text">
+              <h5>Call Us</h5>
+              <p>+234 (0) 80 1234 5678</p>
+            </div>
+          </li>
+          <li class="contact-info-item">
+            <div class="contact-info-icon">📍</div>
+            <div class="contact-info-text">
+              <h5>Headquarters</h5>
+              <p>12 Green Earth Way, Lagos, Nigeria</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+      
+      <!-- Support Contact Form -->
+      <div class="support-form-card">
+        <h3>Send a Message</h3>
+        <form id="support-inquiry-form" style="margin-top: 24px;">
+          <div class="form-group">
+            <label for="support-name">Your Full Name</label>
+            <input type="text" class="form-control" id="support-name" placeholder="John Doe" required>
+          </div>
+          <div class="form-group">
+            <label for="support-email">Email Address</label>
+            <input type="email" class="form-control" id="support-email" placeholder="john@example.com" required>
+          </div>
+          <div class="form-group">
+            <label for="support-phone">Phone Number</label>
+            <input type="tel" class="form-control" id="support-phone" placeholder="+234..." required>
+          </div>
+          <div class="form-group">
+            <label for="support-message">How can we assist you?</label>
+            <textarea class="form-control" id="support-message" rows="4" placeholder="Write your message here..." required></textarea>
+          </div>
+          <button type="submit" class="btn btn-secondary" style="width: 100%;">Submit Message</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container grid grid-4 footer-grid">
+      <div class="footer-info">
+        <a href="/" class="logo">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="11" stroke="#dc3545" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <path d="M12 3C8 6.5 8 13.5 12 18C16 13.5 16 6.5 12 3Z" fill="#198754" fill-opacity="0.8"/>
+            <path d="M4 14C6 17 9 20 12 20C15 20 18 17 20 14" stroke="#0d6efd" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <div class="logo-text" style="color: white;">
+            Eco<span>Empower</span>
+          </div>
+        </a>
+        <p>Empowering women to build sustainable agroforestry, clean energy grids, and climate-resilient futures.</p>
+        <div class="footer-socials">
+          <a href="#" class="social-icon">f</a>
+          <a href="#" class="social-icon">t</a>
+          <a href="#" class="social-icon">i</a>
+          <a href="#" class="social-icon">y</a>
+        </div>
+      </div>
+      
+      <div class="footer-links">
+        <h4>NGO Initiatives</h4>
+        <ul>
+          <li><a href="/about.html">Women Cooperatives</a></li>
+          <li><a href="/about.html">Regenerative Farming</a></li>
+          <li><a href="/about.html">Solar Grids Deployment</a></li>
+          <li><a href="/about.html">Reforestation Networks</a></li>
+        </ul>
+      </div>
+      
+      <div class="footer-links">
+        <h4>Quick Menu</h4>
+        <ul>
+          <li><a href="/about.html">About Our Vision</a></li>
+          <li><a href="/blogs.html">Stories & News</a></li>
+          <li><a href="#support">Inquire & Contact</a></li>
+          <li><a href="/admin.html">Dashboard Portal</a></li>
+        </ul>
+      </div>
+      
+      <div class="footer-newsletter">
+        <h4>Subscribe to Newsletter</h4>
+        <p>Receive monthly reports on project milestones, green tips, and volunteer calls.</p>
+        <form class="newsletter-form" onsubmit="event.preventDefault(); showNotification('Subscribed successfully!', 'success'); this.reset();">
+          <input type="email" class="form-control" placeholder="your.email@example.com" required>
+          <button type="submit" class="btn btn-primary btn-sm">Join</button>
+        </form>
+      </div>
+    </div>
+    
+    <div class="footer-bottom">
+      <div class="container">
+        &copy; 2026 EcoEmpower NGO. All Rights Reserved. Designed with Care.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/js/main.js"></script>
+  <script src="/js/blogs.js"></script>
+  <script src="/js/donation.js"></script>
+  
+  <script>
+    // Load initial stats display
+    window.addEventListener('DOMContentLoaded', () => {
+      // Async update stats display at page load
+      if (typeof updateStatDisplay === 'function') {
+        updateStatDisplay();
+      }
+
+      // Handle support inquiry submissions
+      const supportForm = document.getElementById('support-inquiry-form');
+      if (supportForm) {
+        supportForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const submitBtn = supportForm.querySelector('button[type="submit"]');
+          submitBtn.disabled = true;
+          submitBtn.innerText = 'Submitting message...';
+
+          const payload = {
+            name: document.getElementById('support-name').value.trim(),
+            email: document.getElementById('support-email').value.trim(),
+            phone: document.getElementById('support-phone').value.trim(),
+            message: document.getElementById('support-message').value.trim()
+          };
+
+          try {
+            const res = await fetch('/api/support', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+              showNotification(data.message, 'success');
+              supportForm.reset();
+            } else {
+              showNotification(data.message || 'Submission failed.', 'error');
+            }
+          } catch (err) {
+            console.error('Error submitting support inquiry:', err);
+            showNotification('Error sending support request. Please try again.', 'error');
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Submit Message';
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
