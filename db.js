@@ -35,33 +35,33 @@ const mockDb = {
   blogs: [
     {
       id: 1,
-      title: "Empowering Women Farmers in the Fight Against Climate Change",
-      slug: "empowering-women-farmers-climate-change",
-      body: `<p>Climate change is not gender-neutral. Across the globe, women are disproportionately affected by shifting weather patterns, droughts, and environmental degradation. However, they are also the most powerful agents of change.</p>
-             <p>In our latest green initiative, we trained over 200 women farmers in sustainable agroforestry techniques. By integrating crop cultivation with tree planting, these women have not only restored soil fertility but also established a sustainable source of income through fruit and nut harvesting.</p>
-             <blockquote>"When you empower a woman, you empower an entire community to stand resilient against the environmental crises of our time." - Executive Director</blockquote>
-             <p>Through partnerships and community funding, we aim to scale this program to 1,000 women by the end of next year. Join us in making a difference!</p>`,
-      image_url: "/images/blog-women-farmers.jpg",
+      title: "Preventing SGBV: Educating and Empowering the Next Generation of Girls",
+      slug: "preventing-sgbv-educating-empowering-next-generation",
+      body: `<p>At Doorway to Acceptance (DTA), we believe that education is the first line of defense against Sexual and Gender-Based Violence (SGBV). Education extends far beyond the classroom; it builds the foundation for confidence and leadership.</p>
+             <p>Our Life Skills and Mentorship programmes in local schools and communities teach girls about their rights, building self-esteem and resistance to exploitation. By addressing the root causes of vulnerability—such as poverty and gender inequality—early on, we construct safer societies.</p>
+             <blockquote>"When you educate a girl, you give her the keys to unlock her own safety, dignity, and independence." - DTA Executive Director</blockquote>
+             <p>Join us in expanding this initiative to schools across rural Kenya!</p>`,
+      image_url: "https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&q=80&w=800",
       created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // 3 days ago
     },
     {
       id: 2,
-      title: "The Impact of Climate Action: Planting 10,000 Saplings",
-      slug: "impact-climate-action-10000-saplings",
-      body: `<p>Reforestation is one of the most effective tools we have to combat rising global temperatures. Last month, our dedicated volunteers, school children, and local women groups gathered to plant 10,000 native saplings in critical water catchment areas.</p>
-             <p>This massive planting drive will help restore biodiversity, prevent soil erosion, and safeguard local water supplies. Beyond the ecological benefits, the project has fostered a deep sense of environmental stewardship among youth.</p>
-             <p>We are tracking the survival rate of these saplings using drone mapping to ensure long-term sustainability. Every donation we receive goes directly toward procuring saplings, tools, and supporting the community members who care for them.</p>`,
-      image_url: "/images/blog-saplings.jpg",
+      title: "Climate-Smart Livelihoods: Establishing Women-Led Green Enterprises",
+      slug: "climate-smart-livelihoods-women-led-green-enterprises",
+      body: `<p>Climate change impacts women first and most severely through food insecurity, water scarcity, and loss of traditional livelihoods. DTA works to bridge this gap by establishing climate-smart enterprises.</p>
+             <p>Through our Green Futures Programme, women are launching sustainable beekeeping, regenerative agriculture, and aquaculture projects. These initiatives protect local biodiversity while generating stable, independent income streams that keep families secure.</p>
+             <p>By connecting economic empowerment with environmental conservation, we help communities adapt to climate change while lifting women out of dependency.</p>`,
+      image_url: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=800",
       created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7 days ago
     },
     {
       id: 3,
-      title: "How Communities Lead the Green Revolution",
-      slug: "communities-lead-green-revolution",
-      body: `<p>Top-down policies are essential, but the real battle against climate change is won on the ground by local communities. When community members are given ownership of their natural resources, conservation efforts succeed.</p>
-             <p>Our advocacy programs educate communities on waste management, clean energy alternatives, and forest protection. By aligning economic incentives with ecological conservation, we make sustainability a natural choice.</p>
-             <p>Read on to learn about our community workshops and how you can bring these climate mitigation techniques to your local town or school group.</p>`,
-      image_url: "/images/blog-community.jpg",
+      title: "Walking with Survivors: The Journey to Long-Term Healing and Reintegration",
+      slug: "walking-with-survivors-journey-long-term-healing",
+      body: `<p>While violence prevention remains at the heart of our mission, supporting survivors on their recovery journey is equally crucial. DTA takes a survivor-centered, trauma-informed approach to reintegration.</p>
+             <p>In partnership with healthcare providers and legal counselors, we connect survivors to medical care, emergency safeguarding, and psychosocial counseling. Furthermore, our peer support networks and skills development programs empower survivors to reclaim their independence and rebuild their lives with dignity.</p>
+             <p>Healing is a journey—not a single event—and DTA walks alongside every woman and girl on that path.</p>`,
+      image_url: "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&q=80&w=800",
       created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) // 14 days ago
     }
   ],
@@ -70,8 +70,8 @@ const mockDb = {
       id: 1,
       name: "Jane Doe",
       email: "jane.doe@example.com",
-      phone: "+2348012345678",
-      message: "I am interested in volunteering for the climate action drive next month. Please let me know how I can sign up!",
+      phone: "+254712345678",
+      message: "I am interested in volunteering for the DTA Girls First mentorship drive next month. Please let me know how I can sign up!",
       created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
     }
   ],
@@ -81,7 +81,7 @@ const mockDb = {
       donor_name: "Sarah Jenkins",
       donor_email: "sarah.j@example.com",
       amount: 5000.00,
-      currency: "NGN",
+      currency: "KES",
       reference: "mock-ref-1782387780",
       status: "success",
       created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)

@@ -4,20 +4,20 @@
 /* CSS VARIABLES - Premium Color Palette (Red, Blue, Green) */
 :root {
   /* Primary Theme Colors */
-  --color-green-primary: #198754;      /* Climate Action (Forest Emerald) */
-  --color-green-dark: #0f5132;
-  --color-green-light: #e8f5e9;
-  --color-green-glow: rgba(25, 135, 84, 0.15);
+  --color-green-primary: #1b7b56;      /* Climate Action (Organic Teal-Emerald) */
+  --color-green-dark: #12553a;
+  --color-green-light: #edf7f3;
+  --color-green-glow: rgba(27, 123, 86, 0.15);
 
-  --color-blue-primary: #0d6efd;       /* Trust & Security (Royal Blue) */
-  --color-blue-dark: #0a58ca;
-  --color-blue-light: #e7f1ff;
-  --color-blue-glow: rgba(13, 110, 253, 0.15);
+  --color-blue-primary: #2a5c91;       /* Trust & Youth (Sleek Lapis Blue) */
+  --color-blue-dark: #1a426d;
+  --color-blue-light: #edf2f8;
+  --color-blue-glow: rgba(42, 92, 145, 0.15);
 
-  --color-red-primary: #dc3545;        /* Women Empowerment & Urgency (Coral Red) */
-  --color-red-dark: #b02a37;
-  --color-red-light: #f8d7da;
-  --color-red-glow: rgba(220, 53, 69, 0.15);
+  --color-red-primary: #e05a47;        /* Women Empowerment & Safety (Warm Coral Red) */
+  --color-red-dark: #c54331;
+  --color-red-light: #fdf0ee;
+  --color-red-glow: rgba(224, 90, 71, 0.15);
 
   /* Functional Colors */
   --bg-primary: #fafbfe;

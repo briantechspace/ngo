@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!isAdminPage) return;
 
   // Session Routing
-  const token = localStorage.getItem('eco_admin_token');
+  const token = localStorage.getItem('dta_admin_token');
   if (token) {
     verifySession(token);
   } else {
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
 
         if (data.success) {
-          localStorage.setItem('eco_admin_token', data.token);
+          localStorage.setItem('dta_admin_token', data.token);
           showNotification('Login successful! Welcome to the portal.', 'success');
           showDashboard();
         } else {
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Handle Logout Button Click
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
-      localStorage.removeItem('eco_admin_token');
+      localStorage.removeItem('dta_admin_token');
       showNotification('You have logged out successfully.', 'info');
       showLogin();
     });
@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
       submitBtn.innerText = 'Uploading and Publishing...';
 
       const formData = new FormData(blogForm);
-      const token = localStorage.getItem('eco_admin_token');
+      const token = localStorage.getItem('dta_admin_token');
 
       try {
         const res = await fetch('/api/blogs', {
@@ -204,7 +204,7 @@ async function verifySession(token) {
     if (res.ok) {
       showDashboard();
     } else {
-      localStorage.removeItem('eco_admin_token');
+      localStorage.removeItem('dta_admin_token');
       showLogin();
     }
   } catch (error) {
@@ -216,7 +216,7 @@ async function verifySession(token) {
 
 // Helper: Get Authorization Header object
 function getAuthHeaders() {
-  const token = localStorage.getItem('eco_admin_token');
+  const token = localStorage.getItem('dta_admin_token');
   return {
     'Authorization': `Bearer ${token}`
   };
@@ -248,9 +248,9 @@ async function loadDashboardStats() {
       if (countDonations) countDonations.innerText = stats.donationsCount;
       
       if (sumDonations) {
-        const formattedAmount = new Intl.NumberFormat('en-NG', {
+        const formattedAmount = new Intl.NumberFormat('en-KE', {
           style: 'currency',
-          currency: 'NGN',
+          currency: 'KES',
           minimumFractionDigits: 2
         }).format(stats.totalRaised);
         sumDonations.innerText = formattedAmount;
@@ -330,9 +330,9 @@ async function loadDonations() {
       data.donations.forEach(don => {
         const row = document.createElement('tr');
         
-        const formattedAmount = new Intl.NumberFormat('en-NG', {
+        const formattedAmount = new Intl.NumberFormat('en-KE', {
           style: 'currency',
-          currency: 'NGN',
+          currency: 'KES',
           minimumFractionDigits: 2
         }).format(don.amount);
 

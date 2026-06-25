@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
             key: publicKey,
             email: donorEmail,
             amount: amount * 100, // Paystack works in kobo
-            currency: 'NGN',
+            currency: 'KES',
             ref: reference,
             metadata: {
               custom_fields: [
@@ -146,16 +146,16 @@ function simulatePaystackPayment({ donorName, donorEmail, amount, reference, sub
   overlay.style.justifyContent = 'center';
 
   // Format amount
-  const formattedAmount = new Intl.NumberFormat('en-NG', {
+  const formattedAmount = new Intl.NumberFormat('en-KE', {
     style: 'currency',
-    currency: 'NGN'
+    currency: 'KES'
   }).format(amount);
 
   overlay.innerHTML = `
     <div style="background-color: var(--bg-secondary); border-radius: var(--radius-md); padding: 32px; width: 100%; max-width: 440px; box-shadow: var(--shadow-lg); text-align: center; border: 1px solid var(--border-light); animation: fadeIn 0.3s ease;">
-      <div style="width: 48px; height: 48px; border-radius: 50%; background-color: var(--color-blue-light); color: var(--color-blue-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 20px; font-weight: bold;">P</div>
-      <h3 style="font-size: 20px; margin-bottom: 8px;">Paystack Sandbox Simulation</h3>
-      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">This overlay appears because Paystack keys are not set in your .env file.</p>
+      <div style="width: 60px; height: 60px; border-radius: 50%; background-color: var(--color-blue-light); color: var(--color-blue-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 18px; font-weight: bold;">DTA</div>
+      <h3 style="font-size: 20px; margin-bottom: 8px;">DTA Sandbox Checkout</h3>
+      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">This overlay appears in simulation developer mode (Paystack credentials omitted).</p>
       
       <div style="background-color: var(--bg-primary); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 24px; text-align: left; font-size: 14px; border: 1px solid var(--border-light);">
         <div style="margin-bottom: 8px;"><strong>Donor:</strong> ${escapeHTML(donorName || 'Anonymous')}</div>
@@ -247,9 +247,9 @@ function showSuccessPopup(donorName, amount, reference) {
   modal.style.alignItems = 'center';
   modal.style.justifyContent = 'center';
 
-  const formattedAmount = new Intl.NumberFormat('en-NG', {
+  const formattedAmount = new Intl.NumberFormat('en-KE', {
     style: 'currency',
-    currency: 'NGN'
+    currency: 'KES'
   }).format(amount);
 
   modal.innerHTML = `
@@ -285,9 +285,9 @@ async function updateStatDisplay() {
     const res = await fetch('/api/admin/stats');
     const data = await res.json();
     if (data.success && data.stats) {
-      const formattedAmount = new Intl.NumberFormat('en-NG', {
+      const formattedAmount = new Intl.NumberFormat('en-KE', {
         style: 'currency',
-        currency: 'NGN',
+        currency: 'KES',
         maximumFractionDigits: 0
       }).format(data.stats.totalRaised);
       sumEl.innerText = formattedAmount;
