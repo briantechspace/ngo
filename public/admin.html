@@ -1045,13 +1045,23 @@ footer {
             <p id="stat-donations-count">0</p>
           </div>
         </div>
+
+        <!-- Stat 5: Newsletter Subscribers -->
+        <div class="stat-card">
+          <div class="stat-card-icon">📧</div>
+          <div class="stat-card-info">
+            <h4>Subscribers</h4>
+            <p id="stat-subscribers-count">0</p>
+          </div>
+        </div>
       </div>
 
       <!-- Tab Navigation buttons -->
       <div class="admin-tabs">
         <button class="admin-tab-btn active" data-tab="tab-messages">Support Inquiries</button>
-        <button class="admin-tab-btn" data-tab="tab-donations">Donations Log & Analytics</button>
+        <button class="admin-tab-btn" data-tab="tab-donations">Donations Log &amp; Analytics</button>
         <button class="admin-tab-btn" data-tab="tab-manage-blogs">Manage Blog Posts</button>
+        <button class="admin-tab-btn" data-tab="tab-subscribers">📧 Subscribers</button>
       </div>
 
       <!-- Tab 1 Panel: Support Messages Log -->
@@ -1182,6 +1192,35 @@ footer {
         </div>
       </div>
 
+      <!-- Tab 4 Panel: Newsletter Subscribers -->
+      <div id="tab-subscribers" class="tab-content">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-size: 24px; margin-bottom: 4px;">Newsletter Subscribers</h2>
+            <p style="color: var(--text-muted); font-size: 14px;">All emails subscribed via the footer newsletter form across the site.</p>
+          </div>
+          <div id="subscribers-count-badge" style="padding: 8px 18px; background: var(--color-green-light); color: var(--color-green-primary); border-radius: var(--radius-full); font-weight: 700; font-size: 14px; border: 1px solid rgba(27,123,86,0.2);">
+            0 subscribers
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Email Address</th>
+                <th>Subscribed Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-subscribers-tbody">
+              <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading subscribers...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </main>
 
@@ -1220,7 +1259,7 @@ footer {
       <div class="footer-newsletter">
         <h4>Subscribe to Newsletter</h4>
         <p>Receive monthly field reports, case studies, and volunteer opportunities.</p>
-        <form class="newsletter-form" onsubmit="event.preventDefault(); showNotification('Subscribed successfully!', 'success'); this.reset();">
+        <form class="newsletter-form" id="newsletter-form-admin" onsubmit="handleNewsletterSubscribe(event, this)">
           <input type="email" class="form-control" placeholder="your.email@example.com" required>
           <button type="submit" class="btn btn-primary btn-sm">Join</button>
         </form>

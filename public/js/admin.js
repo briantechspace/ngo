@@ -82,6 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (targetId === 'tab-messages') loadSupportMessages();
       if (targetId === 'tab-donations') loadDonations();
       if (targetId === 'tab-manage-blogs') loadPublishedBlogs();
+      if (targetId === 'tab-subscribers') loadSubscribers();
     });
   });
 
@@ -197,6 +198,7 @@ function showDashboard() {
     loadSupportMessages();
     loadDonations();
     loadPublishedBlogs();
+    loadSubscribers();
   }
 }
 
@@ -258,7 +260,10 @@ async function loadDashboardStats() {
       if (countBlogs) countBlogs.innerText = stats.blogsCount;
       if (countMessages) countMessages.innerText = stats.messagesCount;
       if (countDonations) countDonations.innerText = stats.donationsCount;
-      
+
+      const countSubscribers = document.getElementById('stat-subscribers-count');
+      if (countSubscribers) countSubscribers.innerText = stats.subscribersCount || 0;
+
       if (sumDonations) {
         const formattedAmount = new Intl.NumberFormat('en-KE', {
           style: 'currency',
@@ -730,4 +735,96 @@ function escapeHTML(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// 5. Load Newsletter Subscribers
+async function loadSubscribers() {
+  const tbody = document.getElementById('admin-subscribers-tbody');
+  const countBadge = document.getElementById('subscribers-count-badge');
+  const statCount = document.getElementById('stat-subscribers-count');
+  if (!tbody) return;
+
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px;">Loading...</td></tr>';
+
+  try {
+    const res = await fetch('/api/admin/subscribers', { headers: getAuthHeaders() });
+
+    if (res.status === 401) { showLogin(); return; }
+
+    const data = await res.json();
+
+    if (!data.success) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--color-red-primary);">Failed to load subscribers.</td></tr>';
+      return;
+    }
+
+    const subs = data.subscribers || [];
+
+    // Update count badge and stat card
+    if (countBadge) countBadge.innerText = `${subs.length} subscriber${subs.length !== 1 ? 's' : ''}`;
+    if (statCount) statCount.innerText = subs.length;
+
+    if (subs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:32px;">No subscribers yet. Share the newsletter form with your audience!</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '';
+    subs.forEach((sub, index) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="font-weight:600;color:var(--text-muted);">${index + 1}</td>
+        <td>
+          <a href="mailto:${escapeHTML(sub.email)}" style="color:var(--color-blue-primary);font-weight:500;">
+            ${escapeHTML(sub.email)}
+          </a>
+        </td>
+        <td style="color:var(--text-muted);font-size:13px;">${formatDate(sub.subscribed_at)}</td>
+        <td>
+          <button
+            onclick="deleteSubscriber(${sub.id}, this)"
+            class="btn btn-accent btn-sm"
+            style="padding:6px 12px;font-size:12px;"
+            title="Remove subscriber"
+          >Remove</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error('Error loading subscribers:', err);
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--color-red-primary);">Connection error. Please try again.</td></tr>';
+  }
+}
+
+// Delete a subscriber
+async function deleteSubscriber(id, btn) {
+  if (!confirm('Remove this subscriber from the newsletter list?')) return;
+
+  const originalText = btn.innerText;
+  btn.disabled = true;
+  btn.innerText = '...';
+
+  try {
+    const res = await fetch(`/api/admin/subscribers/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      showNotification('Subscriber removed successfully.', 'success');
+      loadSubscribers();
+      loadDashboardStats();
+    } else {
+      showNotification(data.message || 'Failed to remove subscriber.', 'error');
+      btn.disabled = false;
+      btn.innerText = originalText;
+    }
+  } catch (err) {
+    console.error('Error deleting subscriber:', err);
+    showNotification('Server error. Failed to remove subscriber.', 'error');
+    btn.disabled = false;
+    btn.innerText = originalText;
+  }
 }

@@ -86,7 +86,8 @@ const mockDb = {
       status: "success",
       created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
     }
-  ]
+  ],
+  subscribers: []
 };
 
 // Helper to generate a URL slug from title
@@ -285,12 +286,14 @@ const db = {
       const messagesCount = await pool.query('SELECT COUNT(*) FROM support_messages');
       const donationsCount = await pool.query('SELECT COUNT(*) FROM donations WHERE status = \'success\'');
       const totalAmount = await pool.query('SELECT SUM(amount) FROM donations WHERE status = \'success\'');
-      
+      const subscribersCount = await pool.query('SELECT COUNT(*) FROM subscribers');
+
       return {
         blogsCount: parseInt(blogsCount.rows[0].count),
         messagesCount: parseInt(messagesCount.rows[0].count),
         donationsCount: parseInt(donationsCount.rows[0].count),
-        totalRaised: parseFloat(totalAmount.rows[0].sum || 0)
+        totalRaised: parseFloat(totalAmount.rows[0].sum || 0),
+        subscribersCount: parseInt(subscribersCount.rows[0].count)
       };
     } else {
       const successfulDonations = mockDb.donations.filter(d => d.status === 'success');
@@ -299,7 +302,8 @@ const db = {
         blogsCount: mockDb.blogs.length,
         messagesCount: mockDb.support_messages.length,
         donationsCount: successfulDonations.length,
-        totalRaised
+        totalRaised,
+        subscribersCount: mockDb.subscribers.length
       };
     }
   },
@@ -341,6 +345,55 @@ const db = {
       const index = mockDb.donations.findIndex(d => d.id === parseInt(id));
       if (index !== -1) {
         mockDb.donations.splice(index, 1);
+        return true;
+      }
+      return false;
+    }
+  },
+
+  // NEWSLETTER SUBSCRIBERS
+  async saveSubscriber(email) {
+    const normalizedEmail = email.toLowerCase().trim();
+    if (pool) {
+      // Use INSERT ... ON CONFLICT DO NOTHING for deduplication
+      const res = await pool.query(
+        'INSERT INTO subscribers (email) VALUES ($1) ON CONFLICT (email) DO NOTHING RETURNING *',
+        [normalizedEmail]
+      );
+      if (res.rowCount === 0) {
+        return { duplicate: true, email: normalizedEmail };
+      }
+      return res.rows[0];
+    } else {
+      const exists = mockDb.subscribers.find(s => s.email === normalizedEmail);
+      if (exists) return { duplicate: true, email: normalizedEmail };
+      const newSub = {
+        id: mockDb.subscribers.length + 1,
+        email: normalizedEmail,
+        subscribed_at: new Date()
+      };
+      mockDb.subscribers.push(newSub);
+      return newSub;
+    }
+  },
+
+  async getSubscribers() {
+    if (pool) {
+      const res = await pool.query('SELECT * FROM subscribers ORDER BY subscribed_at DESC');
+      return res.rows;
+    } else {
+      return [...mockDb.subscribers].sort((a, b) => b.subscribed_at - a.subscribed_at);
+    }
+  },
+
+  async deleteSubscriber(id) {
+    if (pool) {
+      const res = await pool.query('DELETE FROM subscribers WHERE id = $1 RETURNING *', [id]);
+      return res.rowCount > 0;
+    } else {
+      const index = mockDb.subscribers.findIndex(s => s.id === parseInt(id));
+      if (index !== -1) {
+        mockDb.subscribers.splice(index, 1);
         return true;
       }
       return false;

@@ -215,6 +215,29 @@ app.post('/api/support', async (req, res) => {
   }
 });
 
+// 5.5 NEWSLETTER: Subscribe (public)
+app.post('/api/newsletter/subscribe', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
+    }
+
+    const result = await db.saveSubscriber(email);
+
+    if (result.duplicate) {
+      return res.json({ success: true, message: 'You are already subscribed. Thank you!' });
+    }
+
+    console.log(`📧 New newsletter subscriber: ${email}`);
+    res.status(201).json({ success: true, message: 'Thank you for subscribing to our newsletter!' });
+  } catch (error) {
+    console.error('Error saving subscriber:', error);
+    res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
+});
+
+
 // 6. PAYMENTS: Verify Paystack Transaction Reference & Log Donation
 app.post('/api/donate/verify', async (req, res) => {
   try {
@@ -451,10 +474,37 @@ app.delete('/api/admin/donations/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// 13. ADMIN: List all newsletter subscribers
+app.get('/api/admin/subscribers', authMiddleware, async (req, res) => {
+  try {
+    const subscribers = await db.getSubscribers();
+    res.json({ success: true, count: subscribers.length, subscribers });
+  } catch (error) {
+    console.error('Error loading subscribers:', error);
+    res.status(500).json({ success: false, message: 'Server error loading subscribers.' });
+  }
+});
+
+// 14. ADMIN: Delete a subscriber
+app.delete('/api/admin/subscribers/:id', authMiddleware, async (req, res) => {
+  try {
+    const deleted = await db.deleteSubscriber(req.params.id);
+    if (deleted) {
+      res.json({ success: true, message: 'Subscriber removed successfully.' });
+    } else {
+      res.status(404).json({ success: false, message: 'Subscriber not found.' });
+    }
+  } catch (error) {
+    console.error('Error deleting subscriber:', error);
+    res.status(500).json({ success: false, message: 'Server error deleting subscriber.' });
+  }
+});
+
 // Fallback to home page for any other route (single page routing support or static files)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
 
 // Start Server
 app.listen(PORT, () => {

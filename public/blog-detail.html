@@ -944,7 +944,7 @@ footer {
       <div class="footer-newsletter">
         <h4>Subscribe to Newsletter</h4>
         <p>Receive monthly field reports, case studies, and volunteer opportunities.</p>
-        <form class="newsletter-form" onsubmit="event.preventDefault(); showNotification('Subscribed successfully!', 'success'); this.reset();">
+        <form class="newsletter-form" id="newsletter-form-blog-detail" onsubmit="handleNewsletterSubscribe(event, this)">
           <input type="email" class="form-control" placeholder="your.email@example.com" required>
           <button type="submit" class="btn btn-primary btn-sm">Join</button>
         </form>

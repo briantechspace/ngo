@@ -105,3 +105,45 @@ function showNotification(message, type = 'success', duration = 5000) {
     }
   }, duration);
 }
+// 5. Newsletter Subscribe Handler (shared across all pages)
+async function handleNewsletterSubscribe(event, form) {
+  event.preventDefault();
+  const emailInput = form.querySelector('input[type="email"]');
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const email = emailInput ? emailInput.value.trim() : '';
+
+  if (!email) {
+    showNotification('Please enter your email address.', 'error');
+    return;
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerText = '...';
+  }
+
+  try {
+    const res = await fetch('/api/newsletter/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      showNotification(data.message || 'Thank you for subscribing!', 'success');
+      form.reset();
+    } else {
+      showNotification(data.message || 'Subscription failed. Please try again.', 'error');
+    }
+  } catch (err) {
+    console.error('Newsletter subscribe error:', err);
+    showNotification('Connection error. Please try again later.', 'error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = 'Join';
+    }
+  }
+}
