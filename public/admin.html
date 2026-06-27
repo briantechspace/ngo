@@ -925,11 +925,22 @@ footer {
   }
   
   .blog-editor-card h2 {
-    font-size: 20px;
+    font-size: 20px;}
+
+.analytics-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+@media (max-width: 992px) {
+  .analytics-row {
+    grid-template-columns: 1fr;
   }
 }
 
   </style>
+  <script src="js/chart.min.js"></script>
 </head>
 <body>
 
@@ -1036,8 +1047,8 @@ footer {
       <!-- Tab Navigation buttons -->
       <div class="admin-tabs">
         <button class="admin-tab-btn active" data-tab="tab-messages">Support Inquiries</button>
-        <button class="admin-tab-btn" data-tab="tab-donations">Donations History</button>
-        <button class="admin-tab-btn" data-tab="tab-write-blog">Publish Blog Post</button>
+        <button class="admin-tab-btn" data-tab="tab-donations">Donations Log & Analytics</button>
+        <button class="admin-tab-btn" data-tab="tab-manage-blogs">Manage Blog Posts</button>
       </div>
 
       <!-- Tab 1 Panel: Support Messages Log -->
@@ -1051,11 +1062,12 @@ footer {
                 <th>Phone Number</th>
                 <th>Inquiry / Message Body</th>
                 <th>Submitted Date</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="admin-messages-tbody">
               <!-- Dynamically populated via admin.js -->
-              <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading messages...</td></tr>
+              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading messages...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1063,6 +1075,32 @@ footer {
 
       <!-- Tab 2 Panel: Donations History Log -->
       <div id="tab-donations" class="tab-content">
+        <!-- Donation Analytics -->
+        <div class="analytics-row">
+          <div class="glass-card" style="padding: 24px;">
+            <h3 style="font-size: 18px; margin-bottom: 16px;">Donations Trend (Successful volume over time)</h3>
+            <div style="position: relative; height: 260px; width: 100%;">
+              <canvas id="donationTrendChart"></canvas>
+            </div>
+          </div>
+          <div class="glass-card" style="padding: 24px;">
+            <h3 style="font-size: 18px; margin-bottom: 16px;">Transaction Status Breakdown</h3>
+            <div style="position: relative; height: 200px; width: 100%;">
+              <canvas id="donationStatusChart"></canvas>
+            </div>
+            <div id="analytics-summary-metrics" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; font-size: 13px; border-top: 1px solid var(--border-light); padding-top: 12px;">
+              <div>
+                <span style="color: var(--text-muted);">Avg Success</span>
+                <p id="metric-avg-donation" style="font-weight: 700; font-size: 15px; margin: 2px 0 0 0;">KES 0</p>
+              </div>
+              <div>
+                <span style="color: var(--text-muted);">Success Rate</span>
+                <p id="metric-success-rate" style="font-weight: 700; font-size: 15px; margin: 2px 0 0 0;">0%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="table-responsive">
           <table class="admin-table">
             <thead>
@@ -1073,44 +1111,56 @@ footer {
                 <th>Transaction Reference</th>
                 <th>Status</th>
                 <th>Logged Date</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="admin-donations-tbody">
               <!-- Dynamically populated via admin.js -->
-              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading donations logs...</td></tr>
+              <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading donations logs...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- Tab 3 Panel: Write and Upload Blog -->
-      <div id="tab-write-blog" class="tab-content">
-        <div class="blog-editor-card">
-          <h2>Create and Publish Article</h2>
-          
-          <form id="admin-blog-form">
-            <div class="form-group">
-              <label for="blog-title-input">Article Title</label>
-              <input type="text" class="form-control" id="blog-title-input" name="title" placeholder="e.g. Empowering Rural Women in Sustainable Energy" required>
-            </div>
-            
-            <div class="form-group">
-              <label for="blog-image-input">Banner Image</label>
-              <input type="file" class="form-control" id="blog-image-input" name="image" accept="image/*">
-              <div class="image-preview-container">
-                <span class="preview-placeholder">Image preview will appear here once chosen.</span>
-                <img id="blog-image-preview" src="" alt="Thumbnail preview" class="image-preview-img">
+      <!-- Tab 3 Panel: Manage Blogs (Write form + Management List) -->
+      <div id="tab-manage-blogs" class="tab-content">
+        <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; align-items: start;">
+          <!-- Left side: Blog Editor -->
+          <div class="blog-editor-card">
+            <h2>Create and Publish Article</h2>
+            <form id="admin-blog-form">
+              <div class="form-group">
+                <label for="blog-title-input">Article Title</label>
+                <input type="text" class="form-control" id="blog-title-input" name="title" placeholder="e.g. Empowering Rural Women in Sustainable Energy" required>
               </div>
+              
+              <div class="form-group">
+                <label for="blog-image-input">Banner Image</label>
+                <input type="file" class="form-control" id="blog-image-input" name="image" accept="image/*">
+                <div class="image-preview-container">
+                  <span class="preview-placeholder">Image preview will appear here once chosen.</span>
+                  <img id="blog-image-preview" src="" alt="Thumbnail preview" class="image-preview-img">
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="blog-body-input">Article Content (Supports HTML paragraphs)</label>
+                <textarea class="form-control" id="blog-body-input" name="body" rows="12" placeholder="Write your post contents here. Use <p></p> for paragraphs, <h3></h3> for sections..." required></textarea>
+                <span class="body-editor-tip">Tip: You can use HTML tags to enrich the layout (e.g. &lt;p&gt;Paragraph&lt;/p&gt;, &lt;blockquote&gt;Quote&lt;/blockquote&gt;).</span>
+              </div>
+              
+              <button type="submit" class="btn btn-secondary">Publish Article</button>
+            </form>
+          </div>
+
+          <!-- Right side: Manage Published Blogs -->
+          <div class="glass-card" style="padding: 24px;">
+            <h2 style="font-size: 24px; margin-bottom: 24px;">Published Articles</h2>
+            <div id="admin-blogs-list-container" style="display: flex; flex-direction: column; gap: 16px; max-height: 700px; overflow-y: auto; padding-right: 8px;">
+              <!-- Dynamically populated via admin.js -->
+              <p style="text-align: center; color: var(--text-muted);">Loading published articles...</p>
             </div>
-            
-            <div class="form-group">
-              <label for="blog-body-input">Article Content (Supports HTML paragraphs)</label>
-              <textarea class="form-control" id="blog-body-input" name="body" rows="12" placeholder="Write your post contents here. Use <p></p> for paragraphs, <h3></h3> for sections..." required></textarea>
-              <span class="body-editor-tip">Tip: You can use HTML tags to enrich the layout (e.g. &lt;p&gt;Paragraph&lt;/p&gt;, &lt;blockquote&gt;Quote&lt;/blockquote&gt;).</span>
-            </div>
-            
-            <button type="submit" class="btn btn-secondary">Publish Article</button>
-          </form>
+          </div>
         </div>
       </div>
 

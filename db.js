@@ -258,6 +258,49 @@ const db = {
         totalRaised
       };
     }
+  },
+
+  // DELETIONS
+  async deleteBlog(id) {
+    if (pool) {
+      const res = await pool.query('DELETE FROM blogs WHERE id = $1 RETURNING *', [id]);
+      return res.rowCount > 0;
+    } else {
+      const index = mockDb.blogs.findIndex(b => b.id === parseInt(id));
+      if (index !== -1) {
+        mockDb.blogs.splice(index, 1);
+        return true;
+      }
+      return false;
+    }
+  },
+
+  async deleteSupportMessage(id) {
+    if (pool) {
+      const res = await pool.query('DELETE FROM support_messages WHERE id = $1 RETURNING *', [id]);
+      return res.rowCount > 0;
+    } else {
+      const index = mockDb.support_messages.findIndex(m => m.id === parseInt(id));
+      if (index !== -1) {
+        mockDb.support_messages.splice(index, 1);
+        return true;
+      }
+      return false;
+    }
+  },
+
+  async deleteDonation(id) {
+    if (pool) {
+      const res = await pool.query('DELETE FROM donations WHERE id = $1 RETURNING *', [id]);
+      return res.rowCount > 0;
+    } else {
+      const index = mockDb.donations.findIndex(d => d.id === parseInt(id));
+      if (index !== -1) {
+        mockDb.donations.splice(index, 1);
+        return true;
+      }
+      return false;
+    }
   }
 };
 

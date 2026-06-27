@@ -293,6 +293,51 @@ app.get('/api/admin/donations', authMiddleware, async (req, res) => {
   }
 });
 
+// 10. ADMIN: Delete a blog post
+app.delete('/api/admin/blogs/:id', authMiddleware, async (req, res) => {
+  try {
+    const deleted = await db.deleteBlog(req.params.id);
+    if (deleted) {
+      res.json({ success: true, message: 'Blog post deleted successfully.' });
+    } else {
+      res.status(404).json({ success: false, message: 'Blog post not found.' });
+    }
+  } catch (error) {
+    console.error('Error deleting blog:', error);
+    res.status(500).json({ success: false, message: 'Server error deleting blog post.' });
+  }
+});
+
+// 11. ADMIN: Delete a support message
+app.delete('/api/admin/messages/:id', authMiddleware, async (req, res) => {
+  try {
+    const deleted = await db.deleteSupportMessage(req.params.id);
+    if (deleted) {
+      res.json({ success: true, message: 'Support message deleted successfully.' });
+    } else {
+      res.status(404).json({ success: false, message: 'Support message not found.' });
+    }
+  } catch (error) {
+    console.error('Error deleting support message:', error);
+    res.status(500).json({ success: false, message: 'Server error deleting support message.' });
+  }
+});
+
+// 12. ADMIN: Delete a donation log
+app.delete('/api/admin/donations/:id', authMiddleware, async (req, res) => {
+  try {
+    const deleted = await db.deleteDonation(req.params.id);
+    if (deleted) {
+      res.json({ success: true, message: 'Donation record deleted successfully.' });
+    } else {
+      res.status(404).json({ success: false, message: 'Donation record not found.' });
+    }
+  } catch (error) {
+    console.error('Error deleting donation:', error);
+    res.status(500).json({ success: false, message: 'Server error deleting donation record.' });
+  }
+});
+
 // Fallback to home page for any other route (single page routing support or static files)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
