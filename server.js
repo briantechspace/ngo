@@ -149,6 +149,17 @@ app.get('/api/config/paystack', (req, res) => {
   res.json({ publicKey });
 });
 
+// 1.5 PUBLIC: Check upload mode (Cloudinary vs local)
+app.get('/api/config/upload-mode', (req, res) => {
+  const isCloudinary = !!(
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    !process.env.CLOUDINARY_CLOUD_NAME.includes('your_cloud_name') &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET
+  );
+  res.json({ cloudinary: isCloudinary, storage: isCloudinary ? 'cloudinary' : 'local' });
+});
+
 // 2. BLOGS: Fetch all blogs (supports search query '?search=something')
 app.get('/api/blogs', async (req, res) => {
   try {

@@ -86,42 +86,166 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Blog Image Upload Preview
-  const imgInput = document.getElementById('blog-image-input');
-  const imgPreview = document.getElementById('blog-image-preview');
-  const previewContainer = document.querySelector('.image-preview-container');
-
-  if (imgInput && imgPreview) {
-    imgInput.addEventListener('change', () => {
-      const file = imgInput.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          imgPreview.src = e.target.result;
-          imgPreview.style.display = 'block';
-          const placeholder = previewContainer.querySelector('.preview-placeholder');
-          if (placeholder) placeholder.style.display = 'none';
-        };
-        reader.readAsDataURL(file);
-      } else {
-        imgPreview.src = '';
-        imgPreview.style.display = 'none';
-        const placeholder = previewContainer.querySelector('.preview-placeholder');
-        if (placeholder) placeholder.style.display = 'block';
+  // ─── Initialize Quill Rich Text Editor ───────────────────────────────────
+  let quillEditor = null;
+  const quillContainer = document.getElementById('blog-quill-editor');
+  if (quillContainer && typeof Quill !== 'undefined') {
+    quillEditor = new Quill('#blog-quill-editor', {
+      theme: 'snow',
+      placeholder: 'Start writing your article here...',
+      modules: {
+        toolbar: [
+          [{ 'header': [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+          ['blockquote', 'link'],
+          [{ 'align': [] }],
+          ['clean']
+        ]
       }
     });
   }
 
-  // Handle New Blog Form Submission
+  // Show Cloudinary / local storage status badge
+  const cloudinaryStatus = document.getElementById('cloudinary-status');
+  if (cloudinaryStatus) {
+    fetch('/api/config/upload-mode')
+      .then(r => r.json())
+      .then(d => {
+        if (d.cloudinary) {
+          cloudinaryStatus.innerText = '☁️ Cloudinary Active';
+          cloudinaryStatus.style.cssText = 'background:var(--color-green-light);color:var(--color-green-primary);font-size:12px;padding:5px 12px;border-radius:var(--radius-full);font-weight:600;';
+        } else {
+          cloudinaryStatus.innerText = '💾 Local Storage';
+          cloudinaryStatus.style.cssText = 'background:#f1f5f9;color:#475569;font-size:12px;padding:5px 12px;border-radius:var(--radius-full);font-weight:600;';
+        }
+      })
+      .catch(() => {});
+  }
+
+  // ─── Image Upload with Preview & Drag-Drop ───────────────────────────────
+  const imgInput = document.getElementById('blog-image-input');
+  const imgPreview = document.getElementById('blog-image-preview');
+  const dropPlaceholder = document.getElementById('image-drop-placeholder');
+  const dropZone = document.getElementById('image-drop-zone');
+
+  function showImagePreview(file) {
+    if (!file || !imgPreview) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      imgPreview.src = e.target.result;
+      imgPreview.style.display = 'block';
+      if (dropPlaceholder) dropPlaceholder.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearImagePreview() {
+    if (imgPreview) { imgPreview.src = ''; imgPreview.style.display = 'none'; }
+    if (dropPlaceholder) dropPlaceholder.style.display = 'block';
+  }
+
+  if (imgInput) {
+    imgInput.addEventListener('change', () => {
+      if (imgInput.files[0]) showImagePreview(imgInput.files[0]);
+      else clearImagePreview();
+    });
+  }
+
+  // Drag-and-drop support
+  if (dropZone && imgInput) {
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--color-blue-primary)';
+      dropZone.style.background = 'var(--color-blue-light)';
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.style.borderColor = 'var(--border-light)';
+      dropZone.style.background = 'var(--bg-primary)';
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--border-light)';
+      dropZone.style.background = 'var(--bg-primary)';
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        // Assign dropped file to the actual input
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        imgInput.files = dt.files;
+        showImagePreview(file);
+      } else {
+        showNotification('Only image files are supported (JPG, PNG, WEBP).', 'error');
+      }
+    });
+  }
+
+  // ─── Animate Upload Progress Bar (simulated while server uploads) ─────────
+  function animateProgress(targetPct, label) {
+    const wrap = document.getElementById('upload-progress-wrap');
+    const bar = document.getElementById('upload-progress-bar');
+    const text = document.getElementById('upload-progress-text');
+    if (!wrap || !bar) return;
+    wrap.style.display = 'block';
+    bar.style.width = targetPct + '%';
+    if (text) text.innerText = label || 'Uploading image...';
+  }
+
+  function hideProgress() {
+    const wrap = document.getElementById('upload-progress-wrap');
+    if (wrap) wrap.style.display = 'none';
+    const bar = document.getElementById('upload-progress-bar');
+    if (bar) bar.style.width = '0%';
+  }
+
+  // ─── Clear Form Button ────────────────────────────────────────────────────
+  const clearBlogBtn = document.getElementById('clear-blog-btn');
+  if (clearBlogBtn) {
+    clearBlogBtn.addEventListener('click', () => {
+      const blogForm = document.getElementById('admin-blog-form');
+      if (blogForm) blogForm.reset();
+      if (quillEditor) quillEditor.setContents([]);
+      clearImagePreview();
+      hideProgress();
+    });
+  }
+
+  // ─── Blog Form Submission ─────────────────────────────────────────────────
   const blogForm = document.getElementById('admin-blog-form');
   if (blogForm) {
     blogForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
-      const submitBtn = blogForm.querySelector('button[type="submit"]');
-      const originalText = submitBtn.innerText;
-      submitBtn.disabled = true;
-      submitBtn.innerText = 'Uploading and Publishing...';
+
+      // Sync Quill HTML to hidden body input
+      const bodyInput = document.getElementById('blog-body-input');
+      const titleInput = document.getElementById('blog-title-input');
+
+      if (quillEditor) {
+        const html = quillEditor.root.innerHTML.trim();
+        const text = quillEditor.getText().trim();
+        if (!text || text === '\n') {
+          showNotification('Please write some article content before publishing.', 'error');
+          return;
+        }
+        if (bodyInput) bodyInput.value = html;
+      }
+
+      if (!titleInput || !titleInput.value.trim()) {
+        showNotification('Please enter an article title.', 'error');
+        titleInput && titleInput.focus();
+        return;
+      }
+
+      const submitBtn = document.getElementById('publish-blog-btn');
+      const originalText = submitBtn ? submitBtn.innerText : '🚀 Publish Article';
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Publishing...'; }
+
+      // Show upload progress if image selected
+      const hasImage = imgInput && imgInput.files && imgInput.files.length > 0;
+      if (hasImage) {
+        animateProgress(30, 'Uploading banner image...');
+        setTimeout(() => animateProgress(70, 'Processing image...'), 600);
+      }
 
       const formData = new FormData(blogForm);
       const token = localStorage.getItem('dta_admin_token');
@@ -129,12 +253,12 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const res = await fetch('/api/blogs', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
+          headers: { 'Authorization': `Bearer ${token}` },
           body: formData
         });
-        
+
+        if (hasImage) animateProgress(100, 'Upload complete!');
+
         if (res.status === 401) {
           showNotification('Session expired. Please log in again.', 'error');
           showLogin();
@@ -144,29 +268,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
 
         if (data.success) {
-          showNotification('Blog post published successfully!', 'success');
+          showNotification('✅ Article published successfully! It is now live on the site.', 'success', 6000);
           blogForm.reset();
-          
-          if (imgPreview) {
-            imgPreview.src = '';
-            imgPreview.style.display = 'none';
-            const placeholder = previewContainer.querySelector('.preview-placeholder');
-            if (placeholder) placeholder.style.display = 'block';
-          }
+          if (quillEditor) quillEditor.setContents([]);
+          clearImagePreview();
+          setTimeout(hideProgress, 800);
 
+          // Refresh both the published list and stat counters
+          loadPublishedBlogs();
           loadDashboardStats();
         } else {
-          showNotification(data.message || 'Failed to create blog.', 'error');
+          showNotification(data.message || 'Failed to publish article.', 'error');
+          hideProgress();
         }
       } catch (error) {
-        console.error('Error creating blog:', error);
-        showNotification('Server connection error. Failed to create blog.', 'error');
+        console.error('Error publishing blog:', error);
+        showNotification('Connection error. Could not publish article.', 'error');
+        hideProgress();
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerText = originalText;
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = originalText; }
       }
     });
   }
+
   const searchInput = document.getElementById('donor-search-input');
   if (searchInput) {
     searchInput.addEventListener('input', () => {

@@ -943,6 +943,9 @@ footer {
 }
 
   </style>
+  <!-- Quill Rich Text Editor -->
+  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
   <script src="js/chart.min.js"></script>
 </head>
 <body>
@@ -1152,40 +1155,67 @@ footer {
 
       <!-- Tab 3 Panel: Manage Blogs (Write form + Management List) -->
       <div id="tab-manage-blogs" class="tab-content">
-        <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; align-items: start;">
+        <div style="display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 24px; align-items: start;">
+
           <!-- Left side: Blog Editor -->
           <div class="blog-editor-card">
-            <h2>Create and Publish Article</h2>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+              <h2 style="margin:0;">Write &amp; Publish Article</h2>
+              <div id="cloudinary-status" style="font-size:12px; padding:5px 12px; border-radius:var(--radius-full); font-weight:600;"></div>
+            </div>
+
             <form id="admin-blog-form">
+              <!-- Title -->
               <div class="form-group">
-                <label for="blog-title-input">Article Title</label>
-                <input type="text" class="form-control" id="blog-title-input" name="title" placeholder="e.g. Empowering Rural Women in Sustainable Energy" required>
+                <label for="blog-title-input">Article Title <span style="color:var(--color-green-primary);">*</span></label>
+                <input type="text" class="form-control" id="blog-title-input" name="title"
+                  placeholder="e.g. Empowering Rural Women in Sustainable Energy" required
+                  style="font-size:17px; font-weight:600;">
               </div>
-              
+
+              <!-- Banner Image Upload -->
               <div class="form-group">
-                <label for="blog-image-input">Banner Image</label>
-                <input type="file" class="form-control" id="blog-image-input" name="image" accept="image/*">
-                <div class="image-preview-container">
-                  <span class="preview-placeholder">Image preview will appear here once chosen.</span>
-                  <img id="blog-image-preview" src="" alt="Thumbnail preview" class="image-preview-img">
+                <label for="blog-image-input">Banner Image <span style="color:var(--text-muted); font-weight:400; font-size:13px;">(optional — JPG, PNG, WEBP, max 5MB)</span></label>
+                <div style="border:2px dashed var(--border-light); border-radius:var(--radius-md); padding:20px; background:var(--bg-primary); cursor:pointer; transition:var(--transition-smooth);" id="image-drop-zone">
+                  <div id="image-drop-placeholder" style="text-align:center;">
+                    <div style="font-size:32px; margin-bottom:8px;">🖼️</div>
+                    <p style="color:var(--text-muted); font-size:14px; margin:0 0 8px 0;">Drag &amp; drop an image here, or</p>
+                    <label for="blog-image-input" class="btn btn-outline btn-sm" style="cursor:pointer; display:inline-flex;">Browse File</label>
+                    <input type="file" id="blog-image-input" name="image" accept="image/jpeg,image/jpg,image/png,image/webp,image/gif" style="display:none;">
+                  </div>
+                  <img id="blog-image-preview" src="" alt="Preview" style="display:none; max-width:100%; max-height:220px; border-radius:var(--radius-sm); margin:0 auto; display:none; object-fit:cover;">
+                </div>
+                <!-- Upload progress bar -->
+                <div id="upload-progress-wrap" style="display:none; margin-top:10px;">
+                  <div style="height:4px; background:var(--border-light); border-radius:4px; overflow:hidden;">
+                    <div id="upload-progress-bar" style="height:100%; width:0%; background:linear-gradient(90deg,var(--color-green-primary),var(--color-blue-primary)); transition:width 0.3s ease; border-radius:4px;"></div>
+                  </div>
+                  <p id="upload-progress-text" style="font-size:12px; color:var(--text-muted); margin:4px 0 0 0;">Uploading image...</p>
                 </div>
               </div>
-              
+
+              <!-- Quill Rich Text Body -->
               <div class="form-group">
-                <label for="blog-body-input">Article Content (Supports HTML paragraphs)</label>
-                <textarea class="form-control" id="blog-body-input" name="body" rows="12" placeholder="Write your post contents here. Use <p></p> for paragraphs, <h3></h3> for sections..." required></textarea>
-                <span class="body-editor-tip">Tip: You can use HTML tags to enrich the layout (e.g. &lt;p&gt;Paragraph&lt;/p&gt;, &lt;blockquote&gt;Quote&lt;/blockquote&gt;).</span>
+                <label>Article Content <span style="color:var(--color-green-primary);">*</span></label>
+                <div id="blog-quill-editor" style="min-height:280px; background:var(--bg-secondary); border-radius:0 0 var(--radius-md) var(--radius-md); font-size:15px;"></div>
+                <!-- Hidden textarea that holds Quill HTML output for submission -->
+                <input type="hidden" id="blog-body-input" name="body">
+                <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">💡 Use the toolbar above to format — <strong>no HTML needed</strong>. Bold, italic, headings, lists, quotes all supported.</p>
               </div>
-              
-              <button type="submit" class="btn btn-secondary">Publish Article</button>
+
+              <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                <button type="submit" id="publish-blog-btn" class="btn btn-secondary" style="padding:14px 32px; font-size:16px;">
+                  🚀 Publish Article
+                </button>
+                <button type="button" id="clear-blog-btn" class="btn btn-outline btn-sm">Clear Form</button>
+              </div>
             </form>
           </div>
 
-          <!-- Right side: Manage Published Blogs -->
+          <!-- Right side: Published Blogs List -->
           <div class="glass-card" style="padding: 24px;">
-            <h2 style="font-size: 24px; margin-bottom: 24px;">Published Articles</h2>
+            <h2 style="font-size: 22px; margin-bottom: 20px;">Published Articles</h2>
             <div id="admin-blogs-list-container" style="display: flex; flex-direction: column; gap: 16px; max-height: 700px; overflow-y: auto; padding-right: 8px;">
-              <!-- Dynamically populated via admin.js -->
               <p style="text-align: center; color: var(--text-muted);">Loading published articles...</p>
             </div>
           </div>
