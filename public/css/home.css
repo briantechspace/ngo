@@ -175,6 +175,22 @@
   border: 1px solid rgba(25, 135, 84, 0.1);
 }
 
+/* Pillar Column Span Utilities */
+.pillar-span-1 {
+  grid-column: span 1;
+}
+
+.pillar-span-2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 768px) {
+  .pillar-span-1, .pillar-span-2 {
+    grid-column: span 1 !important;
+  }
+}
+
+
 .focus-icon {
   width: 64px;
   height: 64px;

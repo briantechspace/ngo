@@ -818,6 +818,22 @@ footer {
   border: 1px solid rgba(25, 135, 84, 0.1);
 }
 
+/* Pillar Column Span Utilities */
+.pillar-span-1 {
+  grid-column: span 1;
+}
+
+.pillar-span-2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 768px) {
+  .pillar-span-1, .pillar-span-2 {
+    grid-column: span 1 !important;
+  }
+}
+
+
 .focus-icon {
   width: 64px;
   height: 64px;
@@ -1263,7 +1279,7 @@ footer {
         </div>
 
         <!-- Pillar 4 -->
-        <div class="focus-card climate glass-card animate-fade" style="grid-column: span 1; animation-delay: 0.3s;">
+        <div class="focus-card climate glass-card pillar-span-1 animate-fade" style="animation-delay: 0.3s;">
           <div class="focus-icon">🛡️</div>
           <h3>4. Safe Communities & Advocacy</h3>
           <p style="font-weight: 600; color: var(--color-red-primary); font-size: 14px; margin-bottom: 12px;">Preventing violence before it occurs.</p>
@@ -1274,7 +1290,7 @@ footer {
         </div>
 
         <!-- Pillar 5 -->
-        <div class="focus-card women glass-card animate-fade" style="grid-column: span 2; display: flex; flex-direction: column; justify-content: space-between; animation-delay: 0.4s;">
+        <div class="focus-card women glass-card pillar-span-2 animate-fade" style="display: flex; flex-direction: column; justify-content: space-between; animation-delay: 0.4s;">
           <div>
             <div class="focus-icon" style="background-color: var(--color-blue-light); color: var(--color-blue-primary);">🤝</div>
             <h3>5. Survivor Support & Reintegration</h3>
@@ -1332,7 +1348,7 @@ footer {
           <span style="font-size: 12px; text-transform: uppercase; font-weight: bold; color: var(--color-red-primary); letter-spacing: 1px;">Advocacy & Safeguarding</span>
         </div>
         <!-- Program 5 -->
-        <div class="glass-card animate-fade" style="padding: 30px; border-top: 4px solid var(--color-green-primary); grid-column: span 2; animation-delay: 0.4s;">
+        <div class="glass-card pillar-span-2 animate-fade" style="padding: 30px; border-top: 4px solid var(--color-green-primary); animation-delay: 0.4s;">
           <h4 style="font-size: 20px; margin-bottom: 12px; font-family: var(--font-heading);">Climate Champions Programme</h4>
           <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 15px;">Building a new generation of women and youth climate leaders who advocate for environmental justice, protect natural resources, adopt clean energy, and implement community-led adaptation projects.</p>
           <span style="font-size: 12px; text-transform: uppercase; font-weight: bold; color: var(--color-green-primary); letter-spacing: 1px;">Climate Leadership</span>
