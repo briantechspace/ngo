@@ -8,16 +8,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const emailInput = document.getElementById('donor-email');
   const phoneInput = document.getElementById('donor-phone');
 
-  // Toggle info fields display when anonymous is checked
+  // Load live raised amount on page load
+  loadLiveRaisedSum();
+
+  // Toggle donor info fields when anonymous checkbox changes
   if (anonymousCheckbox && infoFieldsContainer) {
     anonymousCheckbox.addEventListener('change', () => {
       if (anonymousCheckbox.checked) {
-        infoFieldsContainer.style.display = 'none';
-        if (nameInput) nameInput.required = false;
-        if (emailInput) emailInput.required = false;
-        if (phoneInput) phoneInput.required = false;
+        infoFieldsContainer.style.maxHeight = '0';
+        infoFieldsContainer.style.opacity = '0';
+        infoFieldsContainer.style.overflow = 'hidden';
+        if (nameInput) { nameInput.required = false; nameInput.value = ''; }
+        if (emailInput) { emailInput.required = false; emailInput.value = ''; }
+        if (phoneInput) { phoneInput.required = false; phoneInput.value = ''; }
       } else {
-        infoFieldsContainer.style.display = 'block';
+        infoFieldsContainer.style.maxHeight = '400px';
+        infoFieldsContainer.style.opacity = '1';
+        infoFieldsContainer.style.overflow = 'visible';
         if (nameInput) nameInput.required = true;
         if (emailInput) emailInput.required = true;
         if (phoneInput) phoneInput.required = true;
@@ -25,209 +32,224 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 1. Preset buttons click listeners
+  // Preset amount buttons
   if (presetButtons && customAmountInput) {
     presetButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
-        
-        // Remove active state
         presetButtons.forEach(b => b.classList.remove('active'));
-        
-        // Add active state to clicked
         btn.classList.add('active');
-        
-        // Set value in custom input
         customAmountInput.value = btn.dataset.amount;
+        customAmountInput.dispatchEvent(new Event('input'));
       });
     });
 
-    // Clear preset buttons if user types custom amount
     customAmountInput.addEventListener('input', () => {
-      presetButtons.forEach(b => b.classList.remove('active'));
+      // Clear preset active if user types a custom value not matching any preset
+      const val = customAmountInput.value.trim();
+      const matchesPreset = Array.from(presetButtons).some(b => b.dataset.amount === val);
+      if (!matchesPreset) presetButtons.forEach(b => b.classList.remove('active'));
     });
   }
 
-  // 2. Donation Form Submission listener
+  // Donation form submit handler
   if (donationForm) {
     donationForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
-      const isAnonymous = anonymousCheckbox && anonymousCheckbox.checked;
-      const donorName = isAnonymous ? 'Anonymous' : (nameInput ? nameInput.value.trim() : 'Anonymous');
-      const donorEmail = isAnonymous ? 'anonymous@dta-ngo.org' : (emailInput ? emailInput.value.trim() : 'anonymous@dta-ngo.org');
-      const donorPhone = isAnonymous ? '' : (phoneInput ? phoneInput.value.trim() : '');
-      const amountValue = customAmountInput.value.trim();
 
-      if (!donorEmail || !amountValue) {
-        showNotification('Please provide your email and donation amount.', 'error');
+      const isAnonymous = anonymousCheckbox && anonymousCheckbox.checked;
+
+      // Validate donor info if not anonymous
+      if (!isAnonymous) {
+        const name = nameInput ? nameInput.value.trim() : '';
+        const email = emailInput ? emailInput.value.trim() : '';
+        const phone = phoneInput ? phoneInput.value.trim() : '';
+
+        if (!name) {
+          showNotification('Please enter your full name or choose to donate anonymously.', 'error');
+          nameInput && nameInput.focus();
+          return;
+        }
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          showNotification('Please enter a valid email address.', 'error');
+          emailInput && emailInput.focus();
+          return;
+        }
+        if (!phone) {
+          showNotification('Please enter your phone number.', 'error');
+          phoneInput && phoneInput.focus();
+          return;
+        }
+      }
+
+      const amountValue = customAmountInput ? customAmountInput.value.trim() : '';
+      if (!amountValue) {
+        showNotification('Please select or enter a donation amount.', 'error');
+        customAmountInput && customAmountInput.focus();
         return;
       }
 
       const amount = parseFloat(amountValue);
-      if (isNaN(amount) || amount <= 0) {
-        showNotification('Please enter a valid donation amount greater than 0.', 'error');
+      if (isNaN(amount) || amount < 100) {
+        showNotification('Minimum donation amount is KES 100.', 'error');
         return;
       }
 
-      // Disable button
+      const donorName = isAnonymous ? 'Anonymous' : (nameInput ? nameInput.value.trim() : 'Anonymous');
+      const donorEmail = isAnonymous ? `anon_${Date.now()}@dta-ngo.org` : (emailInput ? emailInput.value.trim() : '');
+      const donorPhone = isAnonymous ? '' : (phoneInput ? phoneInput.value.trim() : '');
+
       const submitBtn = donationForm.querySelector('button[type="submit"]');
-      const originalText = submitBtn.innerText;
-      submitBtn.disabled = true;
-      submitBtn.innerText = 'Initializing payment...';
+      const originalText = submitBtn ? submitBtn.innerText : 'Donate';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Initializing...';
+      }
 
       try {
-        // Fetch Paystack Public Key from server
+        // Fetch Paystack public key from backend
         const configRes = await fetch('/api/config/paystack');
         const configData = await configRes.json();
-        
         const publicKey = configData.publicKey;
-        const reference = 'NGO-' + Date.now() + '-' + Math.round(Math.random() * 1000);
 
-        if (publicKey === 'pk_test_developer_mock_key') {
-          // If developer mode, display simulation dialog overlay
-          simulatePaystackPayment({
-            donorName,
-            donorEmail,
-            donorPhone,
-            amount,
-            reference,
-            submitBtn,
-            originalText
-          });
+        // Generate unique transaction reference
+        const reference = 'DTA-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
+
+        if (!publicKey || publicKey === 'pk_test_developer_mock_key') {
+          // Developer/offline mode - show simulation dialog
+          simulatePaystackCheckout({ donorName, donorEmail, donorPhone, amount, reference, submitBtn, originalText });
         } else {
-          // Trigger Paystack inline checkout
-          payWithPaystack({
-            key: publicKey,
-            email: donorEmail,
-            amount: amount * 100, // Paystack works in kobo
-            currency: 'KES',
-            ref: reference,
-            metadata: {
-              custom_fields: [
-                {
-                  display_name: "Donor Name",
-                  variable_name: "donor_name",
-                  value: donorName
-                },
-                {
-                  display_name: "Donor Phone",
-                  variable_name: "donor_phone",
-                  value: donorPhone
-                }
-              ]
-            },
-            callback: function(response) {
-              // On payment success, call backend verification
-              verifyPaymentOnBackend(response.reference, donorName, donorEmail, donorPhone, amount, submitBtn, originalText);
-            },
-            onClose: function() {
-              showNotification('Donation transaction cancelled.', 'info');
-              submitBtn.disabled = false;
-              submitBtn.innerText = originalText;
-            }
-          });
+          // Live/Test mode - use Paystack Inline popup
+          initiatePaystackCheckout({ publicKey, donorName, donorEmail, donorPhone, amount, reference, submitBtn, originalText });
         }
-      } catch (error) {
-        console.error('Error starting donation transaction:', error);
-        showNotification('Error connecting to payment processor. Please try again.', 'error');
-        submitBtn.disabled = false;
-        submitBtn.innerText = originalText;
+      } catch (err) {
+        console.error('Error starting donation flow:', err);
+        showNotification('Could not connect to payment server. Please try again.', 'error');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerText = originalText;
+        }
       }
     });
   }
 });
 
-// Paystack pop standard call
-function payWithPaystack(options) {
+// ─────────────────────────────────────────────────────────────────────────────
+// PAYSTACK INLINE CHECKOUT (Real integration)
+// ─────────────────────────────────────────────────────────────────────────────
+function initiatePaystackCheckout({ publicKey, donorName, donorEmail, donorPhone, amount, reference, submitBtn, originalText }) {
   if (typeof PaystackPop === 'undefined') {
-    // Lazy load standard Paystack script if missing
-    const script = document.createElement('script');
-    script.src = 'https://js.paystack.co/v1/inline.js';
-    script.onload = () => {
-      const handler = PaystackPop.setup(options);
-      handler.openIframe();
-    };
-    script.onerror = () => {
-      showNotification('Failed to load Paystack payment library.', 'error');
-    };
-    document.head.appendChild(script);
-  } else {
-    const handler = PaystackPop.setup(options);
-    handler.openIframe();
+    showNotification('Payment gateway is loading. Please try again in a moment.', 'error');
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = originalText; }
+    return;
   }
+
+  if (submitBtn) submitBtn.innerText = 'Opening checkout...';
+
+  const handler = PaystackPop.setup({
+    key: publicKey,
+    email: donorEmail,
+    amount: Math.round(amount * 100), // Paystack expects kobo (smallest unit)
+    currency: 'KES',
+    ref: reference,
+    firstname: donorName !== 'Anonymous' ? donorName.split(' ')[0] : '',
+    lastname: donorName !== 'Anonymous' ? donorName.split(' ').slice(1).join(' ') : '',
+    phone: donorPhone || undefined,
+    label: donorName,
+    metadata: {
+      custom_fields: [
+        {
+          display_name: 'Donor Name',
+          variable_name: 'donor_name',
+          value: donorName
+        },
+        {
+          display_name: 'Phone Number',
+          variable_name: 'donor_phone',
+          value: donorPhone || 'N/A'
+        }
+      ]
+    },
+    callback: function(response) {
+      // Payment completed on Paystack side - verify on backend
+      const ref = response.reference || reference;
+      if (submitBtn) submitBtn.innerText = 'Verifying payment...';
+      verifyOnBackend({ reference: ref, donorName, donorEmail, donorPhone, amount, submitBtn, originalText });
+    },
+    onClose: function() {
+      // User closed the popup without completing
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = originalText;
+      }
+      showNotification('Payment window closed. Your donation was not completed.', 'info');
+    }
+  });
+
+  handler.openIframe();
 }
 
-// Simulated mock checkout modal for developers
-function simulatePaystackPayment({ donorName, donorEmail, donorPhone, amount, reference, submitBtn, originalText }) {
-  // Create overlay markup
+// ─────────────────────────────────────────────────────────────────────────────
+// DEVELOPER SIMULATION OVERLAY (When no real API key is set)
+// ─────────────────────────────────────────────────────────────────────────────
+function simulatePaystackCheckout({ donorName, donorEmail, donorPhone, amount, reference, submitBtn, originalText }) {
   const overlay = document.createElement('div');
-  overlay.id = 'dev-paystack-overlay';
-  overlay.style.position = 'fixed';
-  overlay.style.top = '0';
-  overlay.style.left = '0';
-  overlay.style.width = '100vw';
-  overlay.style.height = '100vh';
-  overlay.style.backgroundColor = 'rgba(10, 17, 40, 0.7)';
-  overlay.style.backdropFilter = 'blur(5px)';
-  overlay.style.zIndex = '9999';
-  overlay.style.display = 'flex';
-  overlay.style.alignItems = 'center';
-  overlay.style.justifyContent = 'center';
+  Object.assign(overlay.style, {
+    position: 'fixed', top: '0', left: '0',
+    width: '100vw', height: '100vh',
+    backgroundColor: 'rgba(10, 17, 40, 0.75)',
+    backdropFilter: 'blur(6px)',
+    zIndex: '9999',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    animation: 'fadeIn 0.25s ease'
+  });
 
-  // Format amount
-  const formattedAmount = new Intl.NumberFormat('en-KE', {
-    style: 'currency',
-    currency: 'KES'
-  }).format(amount);
+  const formattedAmount = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(amount);
 
   overlay.innerHTML = `
-    <div style="background-color: var(--bg-secondary); border-radius: var(--radius-md); padding: 32px; width: 100%; max-width: 440px; box-shadow: var(--shadow-lg); text-align: center; border: 1px solid var(--border-light); animation: fadeIn 0.3s ease;">
-      <div style="width: 60px; height: 60px; border-radius: 50%; background-color: var(--color-blue-light); color: var(--color-blue-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 18px; font-weight: bold;">DTA</div>
-      <h3 style="font-size: 20px; margin-bottom: 8px;">DTA Sandbox Checkout</h3>
-      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">This overlay appears in simulation developer mode (Paystack credentials omitted).</p>
-      
-      <div style="background-color: var(--bg-primary); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 24px; text-align: left; font-size: 14px; border: 1px solid var(--border-light);">
-        <div style="margin-bottom: 8px;"><strong>Donor:</strong> ${escapeHTML(donorName || 'Anonymous')}</div>
+    <div style="background: var(--bg-secondary); border-radius: var(--radius-md); padding: 36px 28px; width: 100%; max-width: 420px; box-shadow: var(--shadow-lg); text-align: center; border: 1px solid var(--border-light); position: relative;">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #0ca678 0%, #099268 100%); color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 24px; font-weight: bold;">₦</div>
+      <h3 style="font-size: 20px; margin-bottom: 4px; font-family: var(--font-heading);">DTA Checkout (Test Mode)</h3>
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Add your Paystack API keys in <code>.env</code> to enable live payments.</p>
+
+      <div style="background: var(--bg-primary); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 20px; text-align: left; font-size: 14px; border: 1px solid var(--border-light);">
+        <div style="margin-bottom: 8px;"><strong>Donor:</strong> ${escapeHTML(donorName)}</div>
         <div style="margin-bottom: 8px;"><strong>Email:</strong> ${escapeHTML(donorEmail)}</div>
         ${donorPhone ? `<div style="margin-bottom: 8px;"><strong>Phone:</strong> ${escapeHTML(donorPhone)}</div>` : ''}
         <div style="margin-bottom: 8px;"><strong>Amount:</strong> ${formattedAmount}</div>
-        <div><strong>Reference:</strong> <code style="font-size: 12px; color: var(--text-muted);">${reference}</code></div>
+        <div style="font-size: 12px; color: var(--text-muted);"><strong>Ref:</strong> <code>${reference}</code></div>
       </div>
-      
+
       <div style="display: flex; gap: 12px;">
-        <button id="dev-paystack-success-btn" style="flex: 1; padding: 12px; border-radius: var(--radius-full); border: none; font-family: var(--font-heading); font-weight: bold; background-color: var(--color-green-primary); color: var(--text-light); cursor: pointer; transition: var(--transition-smooth);">Simulate Success</button>
-        <button id="dev-paystack-cancel-btn" style="flex: 1; padding: 12px; border-radius: var(--radius-full); border: 1px solid var(--border-light); font-family: var(--font-heading); font-weight: bold; background-color: transparent; color: var(--text-dark); cursor: pointer; transition: var(--transition-smooth);">Cancel</button>
+        <button id="sim-success-btn" style="flex:1; padding: 12px 0; border-radius: var(--radius-full); border: none; background: linear-gradient(135deg, #0ca678, #099268); color: #fff; font-family: var(--font-heading); font-weight: 700; cursor: pointer; font-size: 15px; transition: opacity 0.2s ease;">✓ Simulate Success</button>
+        <button id="sim-cancel-btn" style="flex:1; padding: 12px 0; border-radius: var(--radius-full); border: 1px solid var(--border-light); background: transparent; color: var(--text-dark); font-family: var(--font-heading); font-weight: 600; cursor: pointer; font-size: 15px; transition: opacity 0.2s ease;">✕ Cancel</button>
       </div>
     </div>
   `;
 
   document.body.appendChild(overlay);
 
-  // Bind simulation controls
-  document.getElementById('dev-paystack-success-btn').addEventListener('click', () => {
+  document.getElementById('sim-success-btn').addEventListener('click', () => {
     overlay.remove();
-    verifyPaymentOnBackend(reference, donorName, donorEmail, donorPhone, amount, submitBtn, originalText);
+    if (submitBtn) submitBtn.innerText = 'Verifying...';
+    verifyOnBackend({ reference, donorName, donorEmail, donorPhone, amount, submitBtn, originalText });
   });
 
-  document.getElementById('dev-paystack-cancel-btn').addEventListener('click', () => {
+  document.getElementById('sim-cancel-btn').addEventListener('click', () => {
     overlay.remove();
-    showNotification('Donation transaction cancelled.', 'info');
-    submitBtn.disabled = false;
-    submitBtn.innerText = originalText;
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = originalText; }
+    showNotification('Donation cancelled.', 'info');
   });
 }
 
-// 3. API backend validation post
-async function verifyPaymentOnBackend(reference, donorName, donorEmail, donorPhone, amount, submitBtn, originalText) {
-  submitBtn.innerText = 'Verifying donation...';
-  
+// ─────────────────────────────────────────────────────────────────────────────
+// BACKEND VERIFICATION — Posts to /api/donate/verify
+// ─────────────────────────────────────────────────────────────────────────────
+async function verifyOnBackend({ reference, donorName, donorEmail, donorPhone, amount, submitBtn, originalText }) {
   try {
     const res = await fetch('/api/donate/verify', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         reference,
         donor_name: donorName,
@@ -236,103 +258,102 @@ async function verifyPaymentOnBackend(reference, donorName, donorEmail, donorPho
         amount
       })
     });
-    
+
     const data = await res.json();
-    
+
     if (data.success) {
-      // Clear form inputs
+      // Reset form
       const form = document.getElementById('donation-form');
       if (form) form.reset();
-      
-      const presetButtons = document.querySelectorAll('.preset-btn');
-      presetButtons.forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
 
-      // Show success modal or simple custom notification
-      showSuccessPopup(donorName, amount, reference);
-      
-      // Update donation stats on page if they are visible
-      updateStatDisplay();
+      // Restore anonymous fields visibility
+      const infoFields = document.getElementById('donor-info-fields');
+      if (infoFields) {
+        infoFields.style.maxHeight = '400px';
+        infoFields.style.opacity = '1';
+        infoFields.style.overflow = 'visible';
+      }
+
+      showDonationSuccessModal(donorName, amount, reference);
+      loadLiveRaisedSum(); // refresh live total
     } else {
-      showNotification(data.message || 'Donation verification failed.', 'error');
+      showNotification(data.message || 'Donation verification failed. Please contact us if payment was deducted.', 'error');
     }
-  } catch (error) {
-    console.error('Error verifying donation:', error);
-    showNotification('Connection error while verifying donation record.', 'error');
+  } catch (err) {
+    console.error('Verification error:', err);
+    showNotification('Network error during verification. Please contact support if payment was deducted.', 'error');
   } finally {
-    submitBtn.disabled = false;
-    submitBtn.innerText = originalText;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = originalText;
+    }
   }
 }
 
-// Donation success thank-you popup
-function showSuccessPopup(donorName, amount, reference) {
+// ─────────────────────────────────────────────────────────────────────────────
+// DONATION SUCCESS MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function showDonationSuccessModal(donorName, amount, reference) {
   const modal = document.createElement('div');
-  modal.style.position = 'fixed';
-  modal.style.top = '0';
-  modal.style.left = '0';
-  modal.style.width = '100vw';
-  modal.style.height = '100vh';
-  modal.style.backgroundColor = 'rgba(10, 17, 40, 0.7)';
-  modal.style.backdropFilter = 'blur(5px)';
-  modal.style.zIndex = '9999';
-  modal.style.display = 'flex';
-  modal.style.alignItems = 'center';
-  modal.style.justifyContent = 'center';
+  Object.assign(modal.style, {
+    position: 'fixed', top: '0', left: '0',
+    width: '100vw', height: '100vh',
+    backgroundColor: 'rgba(10, 17, 40, 0.75)',
+    backdropFilter: 'blur(6px)',
+    zIndex: '9999',
+    display: 'flex', alignItems: 'center', justifyContent: 'center'
+  });
 
-  const formattedAmount = new Intl.NumberFormat('en-KE', {
-    style: 'currency',
-    currency: 'KES'
-  }).format(amount);
+  const formattedAmount = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(amount);
+  const displayName = (donorName && donorName !== 'Anonymous') ? donorName : 'Generous Friend';
 
   modal.innerHTML = `
-    <div style="background-color: var(--bg-secondary); border-radius: var(--radius-lg); padding: 40px 32px; width: 100%; max-width: 480px; box-shadow: var(--shadow-lg); text-align: center; border: 1px solid var(--border-light); animation: fadeIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-      <div style="width: 72px; height: 72px; border-radius: 50%; background-color: var(--color-green-light); color: var(--color-green-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px auto; font-size: 32px;">🌟</div>
-      <h3 style="font-size: 24px; margin-bottom: 8px;">Thank You, ${escapeHTML(donorName || 'Generous Friend')}!</h3>
-      <p style="color: var(--color-blue-primary); font-weight: 600; font-size: 18px; margin-bottom: 16px;">Donation of ${formattedAmount} Received</p>
-      <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 24px;">Your contribution empowers women farmers and funds climate restoration initiatives. Together, we are creating a cleaner, fairer, and brighter world.</p>
-      
-      <div style="font-size: 12px; color: var(--text-muted); padding: 8px 12px; background-color: var(--bg-primary); border-radius: var(--radius-sm); border: 1px solid var(--border-light); font-family: monospace; display: inline-block; margin-bottom: 28px;">
-        Ref: ${reference}
+    <div style="background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 48px 36px; width: 100%; max-width: 480px; box-shadow: var(--shadow-lg); text-align: center; border: 1px solid var(--border-light); animation: fadeIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+      <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #0ca678 0%, #099268 100%); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px auto; font-size: 36px; color: white; box-shadow: 0 8px 24px rgba(12, 166, 120, 0.4);">✓</div>
+      <h3 style="font-size: 26px; margin-bottom: 8px; font-family: var(--font-heading);">Thank You, ${escapeHTML(displayName)}!</h3>
+      <p style="color: var(--color-green-primary); font-weight: 700; font-size: 20px; margin-bottom: 16px;">${formattedAmount} Received</p>
+      <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 28px; line-height: 1.6;">Your generous contribution empowers women farmers, keeps girls in school, and funds climate restoration in Kenya. Together we are building a cleaner, fairer world. 🌿</p>
+      <div style="font-size: 12px; color: var(--text-muted); padding: 10px 16px; background: var(--bg-primary); border-radius: var(--radius-sm); border: 1px solid var(--border-light); font-family: monospace; display: inline-block; margin-bottom: 28px;">
+        Ref: ${escapeHTML(reference)}
       </div>
-      
       <div>
-        <button id="close-thankyou-btn" class="btn btn-primary" style="width: 100%;">Close</button>
+        <button id="close-success-modal" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 16px;">Close</button>
       </div>
     </div>
   `;
 
   document.body.appendChild(modal);
-
-  document.getElementById('close-thankyou-btn').addEventListener('click', () => {
-    modal.remove();
-  });
+  document.getElementById('close-success-modal').addEventListener('click', () => modal.remove());
 }
 
-// Async dynamic stats updater
-async function updateStatDisplay() {
-  const sumEl = document.getElementById('live-raised-sum');
-  if (!sumEl) return;
+// ─────────────────────────────────────────────────────────────────────────────
+// LIVE RAISED SUM — Fetches public stats
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadLiveRaisedSum() {
+  const el = document.getElementById('live-raised-sum');
+  if (!el) return;
 
   try {
-    const res = await fetch('/api/admin/stats');
+    const res = await fetch('/api/public/stats');
     const data = await res.json();
     if (data.success && data.stats) {
-      const formattedAmount = new Intl.NumberFormat('en-KE', {
-        style: 'currency',
-        currency: 'KES',
-        maximumFractionDigits: 0
-      }).format(data.stats.totalRaised);
-      sumEl.innerText = formattedAmount;
+      el.innerText = new Intl.NumberFormat('en-KE', {
+        style: 'currency', currency: 'KES', maximumFractionDigits: 0
+      }).format(data.stats.totalRaised || 0);
     }
   } catch (err) {
-    console.error('Error updating live raised sum:', err);
+    // Fail silently - element retains default value
+    console.warn('Could not load live stats:', err);
   }
 }
 
-// Simple HTML escaping helper
+// ─────────────────────────────────────────────────────────────────────────────
+// HTML ESCAPE UTILITY
+// ─────────────────────────────────────────────────────────────────────────────
 function escapeHTML(str) {
   if (!str) return '';
-  return str
+  return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

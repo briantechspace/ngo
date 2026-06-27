@@ -12,7 +12,11 @@ const { upload, getUploadedFileUrl } = require('./cloudinary');
 const app = express();
 const PORT = process.env.PORT || 5055;
 
-// Middleware
+// Raw body capture for Paystack webhook HMAC verification
+// Must be registered BEFORE bodyParser.json()
+app.use('/api/donate/webhook', bodyParser.raw({ type: 'application/json' }));
+
+// Middleware for all other routes
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -70,15 +74,16 @@ function verifyPaystackPayment(reference) {
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
     if (!secretKey || secretKey.includes('your_secret_key')) {
       console.log(`ℹ️ [Paystack Mock] Verifying reference: ${reference}`);
-      // Simulate successful payment validation
+      // Simulate successful payment validation (amount passed in body, convert to kobo)
       return resolve({
         status: true,
         data: {
           status: 'success',
           reference: reference,
-          amount: 500000, // 5000 NGN in kobo
-          currency: 'NGN',
-          customer: { email: 'mock_donor@example.com' }
+          amount: 0, // Will use body amount directly in the verify route for mock
+          currency: 'KES',
+          customer: { email: 'mock_donor@example.com' },
+          _mock: true
         }
       });
     }
@@ -215,45 +220,50 @@ app.post('/api/donate/verify', async (req, res) => {
   try {
     const { reference, donor_name, donor_email, donor_phone, amount } = req.body;
 
-    if (!reference || !donor_email || !amount) {
-      return res.status(400).json({ success: false, message: 'Reference, email, and amount are required.' });
+    if (!reference || !amount) {
+      return res.status(400).json({ success: false, message: 'Reference and amount are required.' });
     }
 
     // Call Paystack API to verify transaction
     const verification = await verifyPaystackPayment(reference);
 
     if (verification.status && verification.data.status === 'success') {
-      // Amount verified (Paystack returns amount in kobo, convert back to currency units)
-      const verifiedAmount = verification.data.amount / 100;
-      
-      const donation = await db.saveDonation({
+      // For live transactions: Paystack returns amount in kobo → divide by 100
+      // For mock/simulation: use the amount passed from the frontend directly
+      const verifiedAmount = verification.data._mock
+        ? parseFloat(amount)
+        : verification.data.amount / 100;
+
+      const donation = await db.upsertDonation({
         donor_name: donor_name || 'Anonymous',
-        donor_email: donor_email,
-        donor_phone: donor_phone,
+        donor_email: donor_email || 'anonymous@dta-ngo.org',
+        donor_phone: donor_phone || '',
         amount: verifiedAmount,
         reference: reference,
         status: 'success'
       });
 
+      console.log(`✅ Donation logged: ${reference} | KES ${verifiedAmount} | ${donor_name || 'Anonymous'}`);
+
       return res.json({ 
         success: true, 
-        message: 'Donation verified and logged successfully!', 
+        message: 'Donation verified and recorded successfully!', 
         donation 
       });
     } else {
-      // Save failed donation for audit logs
-      await db.saveDonation({
+      // Save failed donation for audit trail
+      await db.upsertDonation({
         donor_name: donor_name || 'Anonymous',
-        donor_email: donor_email,
-        donor_phone: donor_phone,
-        amount: amount,
+        donor_email: donor_email || 'anonymous@dta-ngo.org',
+        donor_phone: donor_phone || '',
+        amount: parseFloat(amount) || 0,
         reference: reference,
         status: 'failed'
       });
 
       return res.status(400).json({ 
         success: false, 
-        message: 'Payment verification failed or was not completed.' 
+        message: 'Payment verification failed. Please contact us if your card was charged.' 
       });
     }
   } catch (error) {
@@ -262,7 +272,108 @@ app.post('/api/donate/verify', async (req, res) => {
   }
 });
 
-// 7. ADMIN: Retrieve dashboard stats
+// 6.5 PAYMENTS: Paystack Webhook Handler
+// NOTE: This route uses bodyParser.raw() (registered above) so req.body is a Buffer
+// This is required by Paystack to correctly verify the HMAC-SHA512 signature
+app.post('/api/donate/webhook', async (req, res) => {
+  try {
+    const signature = req.headers['x-paystack-signature'];
+    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+
+    // req.body is a raw Buffer here - convert to string for HMAC
+    const rawBody = req.body instanceof Buffer ? req.body.toString('utf8') : JSON.stringify(req.body);
+
+    // Verify webhook HMAC signature
+    if (secretKey && !secretKey.includes('your_secret_key')) {
+      const expectedHash = crypto.createHmac('sha512', secretKey)
+        .update(rawBody)
+        .digest('hex');
+
+      if (expectedHash !== signature) {
+        console.warn('⚠️ Paystack webhook signature mismatch - possible replay attack or wrong secret.');
+        return res.status(400).json({ success: false, message: 'Invalid webhook signature.' });
+      }
+    }
+
+    let event;
+    try {
+      event = JSON.parse(rawBody);
+    } catch (parseErr) {
+      return res.status(400).json({ success: false, message: 'Invalid JSON payload.' });
+    }
+
+    console.log(`📦 Paystack webhook received: ${event.event}`);
+
+    if (event.event === 'charge.success') {
+      const data = event.data;
+      const reference = data.reference;
+      const amount = data.amount / 100; // convert kobo → KES
+      const donor_email = (data.customer && data.customer.email) ? data.customer.email : 'anonymous@dta-ngo.org';
+
+      // Extract donor metadata (name & phone) passed during checkout
+      const metadata = data.metadata || {};
+      let donor_name = 'Anonymous';
+      let donor_phone = '';
+
+      if (metadata.custom_fields && Array.isArray(metadata.custom_fields)) {
+        const nameField = metadata.custom_fields.find(f => f.variable_name === 'donor_name');
+        const phoneField = metadata.custom_fields.find(f => f.variable_name === 'donor_phone');
+        if (nameField && nameField.value) donor_name = nameField.value;
+        if (phoneField && phoneField.value && phoneField.value !== 'N/A') donor_phone = phoneField.value;
+      }
+
+      console.log(`✅ Webhook: Donation confirmed ${reference} | KES ${amount} | ${donor_name}`);
+
+      // Upsert donation - webhook is authoritative (overrides any pending status)
+      await db.upsertDonation({
+        donor_name,
+        donor_email,
+        donor_phone,
+        amount,
+        reference,
+        status: 'success'
+      });
+    } else if (event.event === 'charge.failed') {
+      const data = event.data;
+      console.log(`❌ Webhook: Donation failed ${data.reference}`);
+      // Update existing donation record to failed if present
+      await db.upsertDonation({
+        donor_name: 'Unknown',
+        donor_email: (data.customer && data.customer.email) ? data.customer.email : 'anonymous@dta-ngo.org',
+        donor_phone: '',
+        amount: data.amount ? data.amount / 100 : 0,
+        reference: data.reference,
+        status: 'failed'
+      });
+    }
+
+    // Always respond 200 quickly to Paystack
+    res.status(200).json({ success: true, message: 'Webhook received.' });
+  } catch (error) {
+    console.error('Error handling webhook:', error);
+    res.status(500).json({ success: false, message: 'Webhook server error' });
+  }
+});
+
+// 6.9 PUBLIC: Total raised (no auth required - for donation page display)
+app.get('/api/public/stats', async (req, res) => {
+  try {
+    const stats = await db.getDashboardStats();
+    // Only expose safe public data
+    res.json({
+      success: true,
+      stats: {
+        totalRaised: stats.totalRaised || 0,
+        donorsCount: stats.donationsCount || 0
+      }
+    });
+  } catch (error) {
+    console.error('Error loading public stats:', error);
+    res.status(500).json({ success: false, message: 'Server error.' });
+  }
+});
+
+// 7. ADMIN: Retrieve full dashboard stats
 app.get('/api/admin/stats', authMiddleware, async (req, res) => {
   try {
     const stats = await db.getDashboardStats();
