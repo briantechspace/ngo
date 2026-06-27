@@ -1420,14 +1420,26 @@ footer {
       <div class="donation-box animate-fade" style="animation-delay: 0.2s;">
         <h3 style="font-size: 22px; font-family: var(--font-heading);">Secure Donation Portal</h3>
         <form id="donation-form">
-          <div class="form-group">
-            <label for="donor-name">Your Full Name</label>
-            <input type="text" id="donor-name" class="form-control" placeholder="e.g. Jane Doe (Leave blank for Anonymous)">
+          <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+            <input type="checkbox" id="donate-anonymously" style="width: 18px; height: 18px; cursor: pointer;">
+            <label for="donate-anonymously" style="margin-bottom: 0; cursor: pointer; font-weight: 600; color: var(--text-dark);">Donate Anonymously</label>
           </div>
-          
-          <div class="form-group">
-            <label for="donor-email">Email Address *</label>
-            <input type="email" id="donor-email" class="form-control" placeholder="your.email@example.com" required>
+
+          <div id="donor-info-fields" style="transition: all 0.3s ease;">
+            <div class="form-group">
+              <label for="donor-name">Your Full Name *</label>
+              <input type="text" id="donor-name" class="form-control" placeholder="e.g. Jane Doe" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="donor-email">Email Address *</label>
+              <input type="email" id="donor-email" class="form-control" placeholder="your.email@example.com" required>
+            </div>
+
+            <div class="form-group">
+              <label for="donor-phone">Phone Number *</label>
+              <input type="tel" id="donor-phone" class="form-control" placeholder="e.g. +254 712 345678" required>
+            </div>
           </div>
           
           <div class="form-group">
@@ -1441,7 +1453,7 @@ footer {
             <input type="number" id="custom-donation-amount" class="form-control" placeholder="Or enter custom amount in KES" min="100">
           </div>
           
-          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Donate via Paystack</button>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Donate</button>
         </form>
       </div>
     </div>

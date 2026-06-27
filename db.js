@@ -185,11 +185,11 @@ const db = {
   },
 
   // DONATIONS
-  async saveDonation({ donor_name, donor_email, amount, reference, status = 'pending' }) {
+  async saveDonation({ donor_name, donor_email, donor_phone, amount, reference, status = 'pending' }) {
     if (pool) {
       const res = await pool.query(
-        'INSERT INTO donations (donor_name, donor_email, amount, reference, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [donor_name || 'Anonymous', donor_email, amount, reference, status]
+        'INSERT INTO donations (donor_name, donor_email, donor_phone, amount, reference, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [donor_name || 'Anonymous', donor_email, donor_phone || '', amount, reference, status]
       );
       return res.rows[0];
     } else {
@@ -197,6 +197,7 @@ const db = {
         id: mockDb.donations.length + 1,
         donor_name: donor_name || 'Anonymous',
         donor_email,
+        donor_phone: donor_phone || '',
         amount: parseFloat(amount),
         currency: 'NGN',
         reference,

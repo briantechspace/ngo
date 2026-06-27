@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS donations (
     id SERIAL PRIMARY KEY,
     donor_name VARCHAR(255) DEFAULT 'Anonymous',
     donor_email VARCHAR(255) NOT NULL,
+    donor_phone VARCHAR(50),
     amount NUMERIC(10, 2) NOT NULL,
     currency VARCHAR(10) DEFAULT 'NGN',
     reference VARCHAR(100) UNIQUE NOT NULL,

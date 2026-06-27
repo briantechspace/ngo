@@ -213,7 +213,7 @@ app.post('/api/support', async (req, res) => {
 // 6. PAYMENTS: Verify Paystack Transaction Reference & Log Donation
 app.post('/api/donate/verify', async (req, res) => {
   try {
-    const { reference, donor_name, donor_email, amount } = req.body;
+    const { reference, donor_name, donor_email, donor_phone, amount } = req.body;
 
     if (!reference || !donor_email || !amount) {
       return res.status(400).json({ success: false, message: 'Reference, email, and amount are required.' });
@@ -229,6 +229,7 @@ app.post('/api/donate/verify', async (req, res) => {
       const donation = await db.saveDonation({
         donor_name: donor_name || 'Anonymous',
         donor_email: donor_email,
+        donor_phone: donor_phone,
         amount: verifiedAmount,
         reference: reference,
         status: 'success'
@@ -244,6 +245,7 @@ app.post('/api/donate/verify', async (req, res) => {
       await db.saveDonation({
         donor_name: donor_name || 'Anonymous',
         donor_email: donor_email,
+        donor_phone: donor_phone,
         amount: amount,
         reference: reference,
         status: 'failed'

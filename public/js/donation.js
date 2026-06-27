@@ -2,6 +2,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const donationForm = document.getElementById('donation-form');
   const presetButtons = document.querySelectorAll('.preset-btn');
   const customAmountInput = document.getElementById('custom-donation-amount');
+  const anonymousCheckbox = document.getElementById('donate-anonymously');
+  const infoFieldsContainer = document.getElementById('donor-info-fields');
+  const nameInput = document.getElementById('donor-name');
+  const emailInput = document.getElementById('donor-email');
+  const phoneInput = document.getElementById('donor-phone');
+
+  // Toggle info fields display when anonymous is checked
+  if (anonymousCheckbox && infoFieldsContainer) {
+    anonymousCheckbox.addEventListener('change', () => {
+      if (anonymousCheckbox.checked) {
+        infoFieldsContainer.style.display = 'none';
+        if (nameInput) nameInput.required = false;
+        if (emailInput) emailInput.required = false;
+        if (phoneInput) phoneInput.required = false;
+      } else {
+        infoFieldsContainer.style.display = 'block';
+        if (nameInput) nameInput.required = true;
+        if (emailInput) emailInput.required = true;
+        if (phoneInput) phoneInput.required = true;
+      }
+    });
+  }
 
   // 1. Preset buttons click listeners
   if (presetButtons && customAmountInput) {
@@ -31,8 +53,10 @@ document.addEventListener('DOMContentLoaded', () => {
     donationForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       
-      const donorName = document.getElementById('donor-name').value.trim();
-      const donorEmail = document.getElementById('donor-email').value.trim();
+      const isAnonymous = anonymousCheckbox && anonymousCheckbox.checked;
+      const donorName = isAnonymous ? 'Anonymous' : (nameInput ? nameInput.value.trim() : 'Anonymous');
+      const donorEmail = isAnonymous ? 'anonymous@dta-ngo.org' : (emailInput ? emailInput.value.trim() : 'anonymous@dta-ngo.org');
+      const donorPhone = isAnonymous ? '' : (phoneInput ? phoneInput.value.trim() : '');
       const amountValue = customAmountInput.value.trim();
 
       if (!donorEmail || !amountValue) {
@@ -65,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
           simulatePaystackPayment({
             donorName,
             donorEmail,
+            donorPhone,
             amount,
             reference,
             submitBtn,
@@ -83,13 +108,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 {
                   display_name: "Donor Name",
                   variable_name: "donor_name",
-                  value: donorName || "Anonymous"
+                  value: donorName
+                },
+                {
+                  display_name: "Donor Phone",
+                  variable_name: "donor_phone",
+                  value: donorPhone
                 }
               ]
             },
             callback: function(response) {
               // On payment success, call backend verification
-              verifyPaymentOnBackend(response.reference, donorName, donorEmail, amount, submitBtn, originalText);
+              verifyPaymentOnBackend(response.reference, donorName, donorEmail, donorPhone, amount, submitBtn, originalText);
             },
             onClose: function() {
               showNotification('Donation transaction cancelled.', 'info');
@@ -129,7 +159,7 @@ function payWithPaystack(options) {
 }
 
 // Simulated mock checkout modal for developers
-function simulatePaystackPayment({ donorName, donorEmail, amount, reference, submitBtn, originalText }) {
+function simulatePaystackPayment({ donorName, donorEmail, donorPhone, amount, reference, submitBtn, originalText }) {
   // Create overlay markup
   const overlay = document.createElement('div');
   overlay.id = 'dev-paystack-overlay';
@@ -160,6 +190,7 @@ function simulatePaystackPayment({ donorName, donorEmail, amount, reference, sub
       <div style="background-color: var(--bg-primary); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 24px; text-align: left; font-size: 14px; border: 1px solid var(--border-light);">
         <div style="margin-bottom: 8px;"><strong>Donor:</strong> ${escapeHTML(donorName || 'Anonymous')}</div>
         <div style="margin-bottom: 8px;"><strong>Email:</strong> ${escapeHTML(donorEmail)}</div>
+        ${donorPhone ? `<div style="margin-bottom: 8px;"><strong>Phone:</strong> ${escapeHTML(donorPhone)}</div>` : ''}
         <div style="margin-bottom: 8px;"><strong>Amount:</strong> ${formattedAmount}</div>
         <div><strong>Reference:</strong> <code style="font-size: 12px; color: var(--text-muted);">${reference}</code></div>
       </div>
@@ -176,7 +207,7 @@ function simulatePaystackPayment({ donorName, donorEmail, amount, reference, sub
   // Bind simulation controls
   document.getElementById('dev-paystack-success-btn').addEventListener('click', () => {
     overlay.remove();
-    verifyPaymentOnBackend(reference, donorName, donorEmail, amount, submitBtn, originalText);
+    verifyPaymentOnBackend(reference, donorName, donorEmail, donorPhone, amount, submitBtn, originalText);
   });
 
   document.getElementById('dev-paystack-cancel-btn').addEventListener('click', () => {
@@ -188,7 +219,7 @@ function simulatePaystackPayment({ donorName, donorEmail, amount, reference, sub
 }
 
 // 3. API backend validation post
-async function verifyPaymentOnBackend(reference, donorName, donorEmail, amount, submitBtn, originalText) {
+async function verifyPaymentOnBackend(reference, donorName, donorEmail, donorPhone, amount, submitBtn, originalText) {
   submitBtn.innerText = 'Verifying donation...';
   
   try {
@@ -201,6 +232,7 @@ async function verifyPaymentOnBackend(reference, donorName, donorEmail, amount, 
         reference,
         donor_name: donorName,
         donor_email: donorEmail,
+        donor_phone: donorPhone,
         amount
       })
     });

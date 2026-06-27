@@ -353,7 +353,10 @@ async function loadDonations() {
 
         row.innerHTML = `
           <td style="font-weight: 600;">${escapeHTML(don.donor_name)}</td>
-          <td><a href="mailto:${escapeHTML(don.donor_email)}" style="color: var(--color-blue-primary);">${escapeHTML(don.donor_email)}</a></td>
+          <td>
+            <a href="mailto:${escapeHTML(don.donor_email)}" style="color: var(--color-blue-primary);">${escapeHTML(don.donor_email)}</a>
+            ${don.donor_phone ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${escapeHTML(don.donor_phone)}</div>` : ''}
+          </td>
           <td style="font-weight: 700; color: var(--color-green-primary);">${formattedAmount}</td>
           <td style="font-family: monospace; font-size: 13px;">${escapeHTML(don.reference)}</td>
           <td><span class="status-badge ${statusClass}">${escapeHTML(don.status)}</span></td>
