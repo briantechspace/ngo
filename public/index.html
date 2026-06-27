@@ -303,16 +303,37 @@ header.scrolled {
   body {
     font-size: 15px;
   }
+  h1 {
+    font-size: 28px !important;
+  }
+  h2 {
+    font-size: 22px !important;
+  }
+  h3 {
+    font-size: 18px !important;
+  }
   .logo {
-    font-size: 20px;
+    font-size: 18px;
   }
   .logo-icon {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
   }
   .btn {
-    padding: 10px 22px;
-    font-size: 14px;
+    padding: 8px 18px;
+    font-size: 13px;
+  }
+  .container {
+    padding: 0 16px !important;
+  }
+  .focus-card {
+    padding: 24px 16px !important;
+  }
+  .glass-card {
+    padding: 24px 16px !important;
+  }
+  .donation-box {
+    padding: 24px 16px !important;
   }
 }
 
@@ -1406,6 +1427,62 @@ footer {
             "Gender equality and climate action are inseparable. Empowered women lead the healthiest ecosystems and build the safest families."
           </blockquote>
           <p style="font-weight: bold; color: var(--color-blue-primary); margin: 0;">This is why DTA integrates gender equality and climate resilience.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Voices of Acceptance Carousel Section -->
+  <section style="background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--color-red-light) 100%); padding: 60px 0; overflow: hidden; position: relative;">
+    <div style="position: absolute; top: 10%; left: -5%; width: 200px; height: 200px; background: rgba(244, 63, 94, 0.04); border-radius: 50%; filter: blur(50px); pointer-events: none;"></div>
+    <div style="position: absolute; bottom: 10%; right: -5%; width: 300px; height: 300px; background: rgba(42, 92, 145, 0.04); border-radius: 50%; filter: blur(70px); pointer-events: none;"></div>
+
+    <div class="container">
+      <div class="section-header" style="text-align: center; max-width: 600px; margin: 0 auto 30px auto;">
+        <span style="font-size: 12px; text-transform: uppercase; font-weight: bold; color: var(--color-red-primary); letter-spacing: 2px;">Voices of Acceptance</span>
+        <h2 style="font-size: 32px; margin-top: 10px;">Stories &amp; Inspiration</h2>
+      </div>
+
+      <div style="max-width: 750px; margin: 0 auto; position: relative; padding: 0 10px;">
+        <div style="position: relative; min-height: 280px; display: flex; align-items: center; justify-content: center; overflow: hidden;" id="quote-carousel-wrapper">
+          
+          <!-- Slide 1 -->
+          <div class="quote-slide active" style="text-align: center; width: 100%; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); opacity: 1; transform: scale(1) translateY(0); position: relative;">
+            <span style="font-size: 70px; line-height: 1; color: rgba(244, 63, 94, 0.15); font-family: Georgia, serif; display: block; margin-bottom: -20px;">“</span>
+            <p style="font-size: 20px; line-height: 1.6; font-style: italic; color: var(--text-dark); margin-bottom: 20px; font-weight: 500; font-family: var(--font-heading);">
+              "When you empower a girl, you give her the keys to unlock her own safety, dignity, and independence."
+            </p>
+            <h4 style="font-size: 15px; text-transform: uppercase; color: var(--color-red-primary); letter-spacing: 1px; margin-bottom: 4px;">SYLVIA WAMBUI</h4>
+            <p style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Founder &amp; Director, DTA</p>
+          </div>
+
+          <!-- Slide 2 -->
+          <div class="quote-slide" style="text-align: center; width: 100%; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0; transform: scale(0.95) translateY(20px); position: absolute; pointer-events: none;">
+            <span style="font-size: 70px; line-height: 1; color: rgba(244, 63, 94, 0.15); font-family: Georgia, serif; display: block; margin-bottom: -20px;">“</span>
+            <p style="font-size: 20px; line-height: 1.6; font-style: italic; color: var(--text-dark); margin-bottom: 20px; font-weight: 500; font-family: var(--font-heading);">
+              "Before joining DTA, I did not know how to stand up for myself. The mentorship program showed me that my dreams are valid."
+            </p>
+            <h4 style="font-size: 15px; text-transform: uppercase; color: var(--color-blue-primary); letter-spacing: 1px; margin-bottom: 4px;">ALICE, 16</h4>
+            <p style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Mentorship Programme Beneficiary</p>
+          </div>
+
+          <!-- Slide 3 -->
+          <div class="quote-slide" style="text-align: center; width: 100%; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0; transform: scale(0.95) translateY(20px); position: absolute; pointer-events: none;">
+            <span style="font-size: 70px; line-height: 1; color: rgba(244, 63, 94, 0.15); font-family: Georgia, serif; display: block; margin-bottom: -20px;">“</span>
+            <p style="font-size: 20px; line-height: 1.6; font-style: italic; color: var(--text-dark); margin-bottom: 20px; font-weight: 500; font-family: var(--font-heading);">
+              "The beekeeping enterprise helped us secure independent income. We are no longer dependent; we are community stewards."
+            </p>
+            <h4 style="font-size: 15px; text-transform: uppercase; color: var(--color-green-primary); letter-spacing: 1px; margin-bottom: 4px;">MARY W.</h4>
+            <p style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Women's Cooperative Chairperson</p>
+          </div>
+
+        </div>
+
+        <!-- Navigation Dots -->
+        <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;" id="quote-carousel-dots">
+          <button class="carousel-dot active" data-index="0" style="width: 10px; height: 10px; border-radius: 50%; border: none; background-color: var(--color-red-primary); cursor: pointer; padding: 0; transition: all 0.3s ease;"></button>
+          <button class="carousel-dot" data-index="1" style="width: 10px; height: 10px; border-radius: 50%; border: none; background-color: var(--border-light); cursor: pointer; padding: 0; transition: all 0.3s ease;"></button>
+          <button class="carousel-dot" data-index="2" style="width: 10px; height: 10px; border-radius: 50%; border: none; background-color: var(--border-light); cursor: pointer; padding: 0; transition: all 0.3s ease;"></button>
         </div>
       </div>
     </div>

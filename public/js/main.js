@@ -147,3 +147,69 @@ async function handleNewsletterSubscribe(event, form) {
     }
   }
 }
+
+// 6. Voices of Acceptance Quotes Carousel Auto-Scroller
+document.addEventListener('DOMContentLoaded', () => {
+  const slides = document.querySelectorAll('.quote-slide');
+  const dots = document.querySelectorAll('#quote-carousel-dots .carousel-dot');
+  if (slides.length === 0) return;
+
+  let currentIndex = 0;
+  let slideInterval = null;
+
+  function showSlide(index) {
+    slides.forEach((slide, idx) => {
+      if (idx === index) {
+        slide.style.opacity = '1';
+        slide.style.transform = 'scale(1) translateY(0)';
+        slide.style.pointerEvents = 'auto';
+        slide.style.position = 'relative';
+        slide.classList.add('active');
+      } else {
+        slide.style.opacity = '0';
+        slide.style.transform = 'scale(0.95) translateY(20px)';
+        slide.style.pointerEvents = 'none';
+        slide.style.position = 'absolute';
+        slide.classList.remove('active');
+      }
+    });
+
+    dots.forEach((dot, idx) => {
+      if (idx === index) {
+        dot.style.backgroundColor = 'var(--color-red-primary)';
+        dot.classList.add('active');
+      } else {
+        dot.style.backgroundColor = 'var(--border-light)';
+        dot.classList.remove('active');
+      }
+    });
+
+    currentIndex = index;
+  }
+
+  function nextSlide() {
+    let nextIdx = (currentIndex + 1) % slides.length;
+    showSlide(nextIdx);
+  }
+
+  function startAutoPlay() {
+    stopAutoPlay();
+    slideInterval = setInterval(nextSlide, 6000);
+  }
+
+  function stopAutoPlay() {
+    if (slideInterval) clearInterval(slideInterval);
+  }
+
+  dots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      const idx = parseInt(dot.getAttribute('data-index'));
+      showSlide(idx);
+      startAutoPlay(); // Reset interval
+    });
+  });
+
+  // Start auto scroller
+  startAutoPlay();
+});
+
