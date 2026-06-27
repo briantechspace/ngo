@@ -166,6 +166,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+  const searchInput = document.getElementById('donor-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      filterAndSumDonations(searchInput.value.trim());
+    });
+  }
 });
 
 // Helper: Show Login Card
@@ -312,6 +318,9 @@ async function loadSupportMessages() {
   }
 }
 
+// Global memory store for donation logs
+window.allDonations = [];
+
 // 3. Fetch Donation History Logs
 async function loadDonations() {
   const tbody = document.getElementById('admin-donations-tbody');
@@ -330,47 +339,104 @@ async function loadDonations() {
     const data = await res.json();
 
     if (data.success) {
-      tbody.innerHTML = '';
+      window.allDonations = data.donations;
       
       // Update charts & stats metrics
       renderDonationCharts(data.donations);
 
-      if (data.donations.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No donations received yet.</td></tr>';
-        return;
+      // Render the table rows
+      const searchInput = document.getElementById('donor-search-input');
+      const searchVal = searchInput ? searchInput.value.trim() : '';
+      if (searchVal) {
+        filterAndSumDonations(searchVal);
+      } else {
+        renderDonationRows(data.donations);
       }
-
-      data.donations.forEach(don => {
-        const row = document.createElement('tr');
-        
-        const formattedAmount = new Intl.NumberFormat('en-KE', {
-          style: 'currency',
-          currency: 'KES',
-          minimumFractionDigits: 2
-        }).format(don.amount);
-
-        const statusClass = don.status === 'success' ? 'success' : (don.status === 'pending' ? 'pending' : 'failed');
-
-        row.innerHTML = `
-          <td style="font-weight: 600;">${escapeHTML(don.donor_name)}</td>
-          <td>
-            <a href="mailto:${escapeHTML(don.donor_email)}" style="color: var(--color-blue-primary);">${escapeHTML(don.donor_email)}</a>
-            ${don.donor_phone ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${escapeHTML(don.donor_phone)}</div>` : ''}
-          </td>
-          <td style="font-weight: 700; color: var(--color-green-primary);">${formattedAmount}</td>
-          <td style="font-family: monospace; font-size: 13px;">${escapeHTML(don.reference)}</td>
-          <td><span class="status-badge ${statusClass}">${escapeHTML(don.status)}</span></td>
-          <td style="font-size: 13px; color: var(--text-muted);">${formatDate(don.created_at)}</td>
-          <td>
-            <button class="btn btn-outline btn-sm" onclick="window.deleteDonation(${don.id})" style="border-color: var(--color-red-primary); color: var(--color-red-primary); padding: 4px 10px; font-size: 12px;">Delete</button>
-          </td>
-        `;
-        tbody.appendChild(row);
-      });
     }
   } catch (error) {
     console.error('Error loading donations:', error);
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--color-red-primary);">Error loading donations.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-primary);">Error loading donations.</td></tr>';
+  }
+}
+
+// Render donation list helper
+function renderDonationRows(donations) {
+  const tbody = document.getElementById('admin-donations-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+  if (donations.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No matching donations found.</td></tr>';
+    return;
+  }
+
+  donations.forEach(don => {
+    const row = document.createElement('tr');
+    
+    const formattedAmount = new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES',
+      minimumFractionDigits: 2
+    }).format(don.amount);
+
+    const statusClass = don.status === 'success' ? 'success' : (don.status === 'pending' ? 'pending' : 'failed');
+
+    row.innerHTML = `
+      <td style="font-weight: 600;">${escapeHTML(don.donor_name)}</td>
+      <td>
+        <a href="mailto:${escapeHTML(don.donor_email)}" style="color: var(--color-blue-primary);">${escapeHTML(don.donor_email)}</a>
+        ${don.donor_phone ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${escapeHTML(don.donor_phone)}</div>` : ''}
+      </td>
+      <td style="font-weight: 700; color: var(--color-green-primary);">${formattedAmount}</td>
+      <td style="font-family: monospace; font-size: 13px;">${escapeHTML(don.reference)}</td>
+      <td><span class="status-badge ${statusClass}">${escapeHTML(don.status)}</span></td>
+      <td style="font-size: 13px; color: var(--text-muted);">${formatDate(don.created_at)}</td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="window.deleteDonation(${don.id})" style="border-color: var(--color-red-primary); color: var(--color-red-primary); padding: 4px 10px; font-size: 12px;">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+// Filter and sum donor contributions lookup
+function filterAndSumDonations(query) {
+  const tbody = document.getElementById('admin-donations-tbody');
+  const badge = document.getElementById('donor-total-badge');
+  const totalVal = document.getElementById('donor-total-value');
+  if (!tbody || !window.allDonations) return;
+
+  const normalizedQuery = query.toLowerCase();
+
+  // If query is empty, show all rows and hide badge
+  if (!normalizedQuery) {
+    renderDonationRows(window.allDonations);
+    if (badge) badge.style.display = 'none';
+    return;
+  }
+
+  // Filter donations
+  const filtered = window.allDonations.filter(don => {
+    const nameMatch = (don.donor_name || '').toLowerCase().includes(normalizedQuery);
+    const emailMatch = (don.donor_email || '').toLowerCase().includes(normalizedQuery);
+    const phoneMatch = (don.donor_phone || '').toLowerCase().includes(normalizedQuery);
+    const refMatch = (don.reference || '').toLowerCase().includes(normalizedQuery);
+    return nameMatch || emailMatch || phoneMatch || refMatch;
+  });
+
+  // Render the filtered rows
+  renderDonationRows(filtered);
+
+  // Calculate sum of successful donations for matching email/phone to show totals
+  const successfulFiltered = filtered.filter(d => d.status === 'success');
+  const sum = successfulFiltered.reduce((total, d) => total + parseFloat(d.amount), 0);
+
+  if (badge && totalVal) {
+    badge.style.display = 'block';
+    totalVal.innerText = new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES'
+    }).format(sum);
   }
 }
 
@@ -443,6 +509,30 @@ function renderDonationCharts(donations) {
   }
   if (metricRate) {
     metricRate.innerText = `${successRate}%`;
+  }
+
+  // Calculate Weekly Total (EAT - East Africa Time, UTC+3)
+  const nowEATString = new Date().toLocaleString('en-US', { timeZone: 'Africa/Nairobi' });
+  const nowEAT = new Date(nowEATString);
+  const currentDay = nowEAT.getDay(); // 0 is Sunday, 1 is Monday...
+  const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+  const startOfWeekEAT = new Date(nowEAT);
+  startOfWeekEAT.setDate(nowEAT.getDate() + diffToMonday);
+  startOfWeekEAT.setHours(0, 0, 0, 0);
+
+  const weeklySuccessDons = successfulDons.filter(d => {
+    const donDateEAT = new Date(new Date(d.created_at).toLocaleString('en-US', { timeZone: 'Africa/Nairobi' }));
+    return donDateEAT >= startOfWeekEAT;
+  });
+  const weeklyTotal = weeklySuccessDons.reduce((sum, d) => sum + parseFloat(d.amount), 0);
+
+  const metricWeekly = document.getElementById('metric-weekly-total');
+  if (metricWeekly) {
+    metricWeekly.innerText = new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES',
+      minimumFractionDigits: 0
+    }).format(weeklyTotal);
   }
 
   // Destroy previous instances if they exist
@@ -619,8 +709,16 @@ window.deleteDonation = async function(id) {
 
 // Helper: Format Date
 function formatDate(dateString) {
-  const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-  return new Date(dateString).toLocaleDateString(undefined, options);
+  const options = { 
+    timeZone: 'Africa/Nairobi',
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric', 
+    hour: '2-digit', 
+    minute: '2-digit',
+    timeZoneName: 'short'
+  };
+  return new Date(dateString).toLocaleDateString('en-US', options);
 }
 
 // Simple HTML escaping helper

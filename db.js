@@ -205,7 +205,50 @@ const db = {
         created_at: new Date()
       };
       mockDb.donations.push(newDonation);
-      return newDonation;
+    }
+  },
+
+  async upsertDonation({ donor_name, donor_email, donor_phone, amount, reference, status }) {
+    if (pool) {
+      // Check if reference exists
+      const checkRes = await pool.query('SELECT * FROM donations WHERE reference = $1', [reference]);
+      if (checkRes.rowCount > 0) {
+        const updateRes = await pool.query(
+          'UPDATE donations SET status = $1, donor_name = $2, donor_email = $3, donor_phone = $4, amount = $5 WHERE reference = $6 RETURNING *',
+          [status, donor_name || 'Anonymous', donor_email, donor_phone || '', amount, reference]
+        );
+        return updateRes.rows[0];
+      } else {
+        const insertRes = await pool.query(
+          'INSERT INTO donations (donor_name, donor_email, donor_phone, amount, reference, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+          [donor_name || 'Anonymous', donor_email, donor_phone || '', amount, reference, status]
+        );
+        return insertRes.rows[0];
+      }
+    } else {
+      const existing = mockDb.donations.find(d => d.reference === reference);
+      if (existing) {
+        existing.status = status;
+        existing.donor_name = donor_name || 'Anonymous';
+        existing.donor_email = donor_email;
+        existing.donor_phone = donor_phone || '';
+        existing.amount = parseFloat(amount);
+        return existing;
+      } else {
+        const newDonation = {
+          id: mockDb.donations.length + 1,
+          donor_name: donor_name || 'Anonymous',
+          donor_email,
+          donor_phone: donor_phone || '',
+          amount: parseFloat(amount),
+          currency: 'NGN',
+          reference,
+          status,
+          created_at: new Date()
+        };
+        mockDb.donations.push(newDonation);
+        return newDonation;
+      }
     }
   },
 
