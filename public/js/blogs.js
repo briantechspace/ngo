@@ -6,9 +6,9 @@ const fallbackBlogs = [
     slug: "preventing-sgbv-educating-empowering-next-generation",
     body: `<p>At Doorway to Acceptance (DTA), we believe that education is the first line of defense against Sexual and Gender-Based Violence (SGBV). Education extends far beyond the classroom; it builds the foundation for confidence and leadership.</p>
            <p>Our Life Skills and Mentorship programmes in local schools and communities teach girls about their rights, building self-esteem and resistance to exploitation. By addressing the root causes of vulnerability—such as poverty and gender inequality—early on, we construct safer societies.</p>
-           <blockquote>"When you educate a girl, you give her the keys to unlock her own safety, dignity, and independence." - DTA Executive Director</blockquote>
+           <blockquote>"When you educate a girl, you give her the keys to unlock her own safety, dignity, and independence." - SYLVIA WAMBUI, Founder & Director</blockquote>
            <p>Join us in expanding this initiative to schools across rural Kenya!</p>`,
-    image_url: "https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&q=80&w=800",
+    image_url: "/images/blog_sgbv.jpg",
     created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
   },
   {
@@ -18,7 +18,7 @@ const fallbackBlogs = [
     body: `<p>Climate change impacts women first and most severely through food insecurity, water scarcity, and loss of traditional livelihoods. DTA works to bridge this gap by establishing climate-smart enterprises.</p>
            <p>Through our Green Futures Programme, women are launching sustainable beekeeping, regenerative agriculture, and aquaculture projects. These initiatives protect local biodiversity while generating stable, independent income streams that keep families secure.</p>
            <p>By connecting economic empowerment with environmental conservation, we help communities adapt to climate change while lifting women out of dependency.</p>`,
-    image_url: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=800",
+    image_url: "/images/blog_climate.jpg",
     created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
   },
   {
@@ -28,7 +28,7 @@ const fallbackBlogs = [
     body: `<p>While violence prevention remains at the heart of our mission, supporting survivors on their recovery journey is equally crucial. DTA takes a survivor-centered, trauma-informed approach to reintegration.</p>
            <p>In partnership with healthcare providers and legal counselors, we connect survivors to medical care, emergency safeguarding, and psychosocial counseling. Furthermore, our peer support networks and skills development programs empower survivors to reclaim their independence and rebuild their lives with dignity.</p>
            <p>Healing is a journey—not a single event—and DTA walks alongside every woman and girl on that path.</p>`,
-    image_url: "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&q=80&w=800",
+    image_url: "/images/blog_survivors.jpg",
     created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
   }
 ];
@@ -262,7 +262,7 @@ function createBlogCard(blog) {
   const imageUrl = blog.image_url || '/images/blog-placeholder.jpg';
   
   card.innerHTML = `
-    <img src="${imageUrl}" alt="${escapeHTML(blog.title)}" class="blog-card-img" onerror="this.src='https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&q=80&w=600'">
+    <img src="${imageUrl}" alt="${escapeHTML(blog.title)}" class="blog-card-img" onerror="this.src='/images/blog-placeholder.jpg'">
     <div class="blog-card-content">
       <div class="blog-card-date">${formatDate(blog.created_at)}</div>
       <h3 class="blog-card-title">${escapeHTML(blog.title)}</h3>
