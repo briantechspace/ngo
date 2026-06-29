@@ -200,12 +200,13 @@ const db = {
         donor_email,
         donor_phone: donor_phone || '',
         amount: parseFloat(amount),
-        currency: 'NGN',
+        currency: 'KES',
         reference,
         status,
         created_at: new Date()
       };
       mockDb.donations.push(newDonation);
+      return newDonation;
     }
   },
 
@@ -242,7 +243,7 @@ const db = {
           donor_email,
           donor_phone: donor_phone || '',
           amount: parseFloat(amount),
-          currency: 'NGN',
+          currency: 'KES',
           reference,
           status,
           created_at: new Date()

@@ -27,12 +27,20 @@ CREATE TABLE IF NOT EXISTS donations (
     donor_email VARCHAR(255) NOT NULL,
     donor_phone VARCHAR(50),
     amount NUMERIC(10, 2) NOT NULL,
-    currency VARCHAR(10) DEFAULT 'NGN',
+    currency VARCHAR(10) DEFAULT 'KES',
     reference VARCHAR(100) UNIQUE NOT NULL,
     status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Newsletter Subscribers Table
+CREATE TABLE IF NOT EXISTS subscribers (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    subscribed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Index for blog search and slug lookup
 CREATE INDEX IF NOT EXISTS idx_blogs_slug ON blogs(slug);
 CREATE INDEX IF NOT EXISTS idx_blogs_title ON blogs(title);
+CREATE INDEX IF NOT EXISTS idx_subscribers_email ON subscribers(email);

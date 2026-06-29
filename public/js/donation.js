@@ -208,7 +208,7 @@ function simulatePaystackCheckout({ donorName, donorEmail, donorPhone, amount, r
 
   overlay.innerHTML = `
     <div style="background: var(--bg-secondary); border-radius: var(--radius-md); padding: 36px 28px; width: 100%; max-width: 420px; box-shadow: var(--shadow-lg); text-align: center; border: 1px solid var(--border-light); position: relative;">
-      <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #0ca678 0%, #099268 100%); color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 24px; font-weight: bold;">₦</div>
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #0ca678 0%, #099268 100%); color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 20px; font-weight: bold;">KSh</div>
       <h3 style="font-size: 20px; margin-bottom: 4px; font-family: var(--font-heading);">DTA Checkout (Test Mode)</h3>
       <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Add your Paystack API keys in <code>.env</code> to enable live payments.</p>
 

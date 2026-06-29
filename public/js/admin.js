@@ -906,7 +906,7 @@ async function loadSubscribers() {
         <td style="color:var(--text-muted);font-size:13px;">${formatDate(sub.subscribed_at)}</td>
         <td>
           <button
-            onclick="deleteSubscriber(${sub.id}, this)"
+            onclick="window.deleteSubscriber(${sub.id}, this)"
             class="btn btn-accent btn-sm"
             style="padding:6px 12px;font-size:12px;"
             title="Remove subscriber"
@@ -922,7 +922,7 @@ async function loadSubscribers() {
 }
 
 // Delete a subscriber
-async function deleteSubscriber(id, btn) {
+window.deleteSubscriber = async function(id, btn) {
   if (!confirm('Remove this subscriber from the newsletter list?')) return;
 
   const originalText = btn.innerText;
