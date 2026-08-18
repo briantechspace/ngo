@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Sticky Header scroll effect
   const header = document.querySelector('header');
   window.addEventListener('scroll', () => {
     if (window.scrollY > 20) {
@@ -9,12 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 2. Mobile Drawer Hamburger Menu
   const hamburger = document.querySelector('.hamburger');
   const navLinks = document.querySelector('.nav-links');
 
   if (hamburger && navLinks) {
-    // Create backdrop overlay element dynamically
     const overlay = document.createElement('div');
     overlay.className = 'nav-overlay';
     document.body.appendChild(overlay);
@@ -32,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const isOpen = navLinks.classList.toggle('open');
       overlay.classList.toggle('active', isOpen);
       
-      // Animate hamburger lines
       const lines = hamburger.querySelectorAll('span');
       if (isOpen) {
         lines[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
@@ -45,16 +41,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Close menu when clicking outside (on overlay)
     overlay.addEventListener('click', closeMobileMenu);
 
-    // Close mobile menu when clicking a link
     document.querySelectorAll('.nav-links a').forEach(link => {
       link.addEventListener('click', closeMobileMenu);
     });
   }
 
-  // 3. Global Search Bar Redirection
   const searchForm = document.getElementById('global-search-form');
   const searchInput = document.getElementById('global-search-input');
 
@@ -68,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 3.5. Interactive FAQ Accordions
   document.querySelectorAll('.faq-accordion').forEach(accordion => {
     accordion.addEventListener('click', (e) => {
       const questionBtn = e.target.closest('.faq-question');
@@ -78,12 +70,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const wasActive = item.classList.contains('active');
       
-      // Close other items in the same accordion
       accordion.querySelectorAll('.faq-item').forEach(otherItem => {
         otherItem.classList.remove('active');
       });
 
-      // Toggle clicked item
       if (!wasActive) {
         item.classList.add('active');
       }
@@ -91,19 +81,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// 4. Global Toast Notification Banner Utility
 function showNotification(message, type = 'success', duration = 5000) {
-  // Remove existing banner if any
   const existingBanner = document.querySelector('.alert-banner');
   if (existingBanner) {
     existingBanner.remove();
   }
 
-  // Create notification container
   const banner = document.createElement('div');
   banner.className = `alert-banner ${type}`;
   
-  // Icon / Content
   let icon = '🔔';
   if (type === 'success') icon = '✅';
   if (type === 'error') icon = '❌';
@@ -117,7 +103,6 @@ function showNotification(message, type = 'success', duration = 5000) {
 
   document.body.appendChild(banner);
 
-  // Auto remove
   setTimeout(() => {
     if (banner.parentElement) {
       banner.style.opacity = '0';
@@ -127,7 +112,7 @@ function showNotification(message, type = 'success', duration = 5000) {
     }
   }, duration);
 }
-// 5. Newsletter Subscribe Handler (shared across all pages)
+
 async function handleNewsletterSubscribe(event, form) {
   event.preventDefault();
   const emailInput = form.querySelector('input[type="email"]');
@@ -160,7 +145,6 @@ async function handleNewsletterSubscribe(event, form) {
       showNotification(data.message || 'Subscription failed. Please try again.', 'error');
     }
   } catch (err) {
-    console.error('Newsletter subscribe error:', err);
     showNotification('Connection error. Please try again later.', 'error');
   } finally {
     if (submitBtn) {
@@ -170,7 +154,6 @@ async function handleNewsletterSubscribe(event, form) {
   }
 }
 
-// 6. Voices of Acceptance Quotes Carousel Auto-Scroller
 document.addEventListener('DOMContentLoaded', () => {
   const slides = document.querySelectorAll('.quote-slide');
   const dots = document.querySelectorAll('#quote-carousel-dots .carousel-dot');
@@ -227,11 +210,9 @@ document.addEventListener('DOMContentLoaded', () => {
     dot.addEventListener('click', () => {
       const idx = parseInt(dot.getAttribute('data-index'));
       showSlide(idx);
-      startAutoPlay(); // Reset interval
+      startAutoPlay();
     });
   });
 
-  // Start auto scroller
   startAutoPlay();
 });
-

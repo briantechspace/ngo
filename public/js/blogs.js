@@ -1,4 +1,3 @@
-// Mock seed data for standalone browser presentation fallbacks (running under file://)
 const fallbackBlogs = [
   {
     id: 1,
@@ -45,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (isBlogsPage) {
     const urlParams = new URLSearchParams(window.location.search);
     const searchParam = urlParams.get('search');
-    
     const searchInput = document.getElementById('blogs-search-input');
     if (searchParam && searchInput) {
       searchInput.value = searchParam;
@@ -59,8 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const query = searchInput.value.trim();
         loadBlogs(query);
-        
-        // Update URL query string without reloading page
         const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + 
           (query ? `?search=${encodeURIComponent(query)}` : '');
         window.history.pushState({ path: newUrl }, '', newUrl);
@@ -73,13 +69,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Helper: Format Dates
 function formatDate(dateString) {
-  const options = { year: 'numeric', month: 'long', day: 'numeric' };
-  return new Date(dateString).toLocaleDateString(undefined, options);
+  return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-// Helper: Truncate Text
 function truncateText(htmlText, limit = 120) {
   const doc = new DOMParser().parseFromString(htmlText, 'text/html');
   const text = doc.body.textContent || "";
@@ -87,7 +80,6 @@ function truncateText(htmlText, limit = 120) {
   return text.slice(0, limit) + '...';
 }
 
-// 1. HOME: Load 3 recent blogs
 async function loadHomeRecentBlogs() {
   const container = document.getElementById('recent-blogs-container');
   if (!container) return;
@@ -98,26 +90,20 @@ async function loadHomeRecentBlogs() {
 
     if (data.success && data.blogs.length > 0) {
       container.innerHTML = '';
-      const recent = data.blogs.slice(0, 3);
-      recent.forEach(blog => {
-        const card = createBlogCard(blog);
-        container.appendChild(card);
+      data.blogs.slice(0, 3).forEach(blog => {
+        container.appendChild(createBlogCard(blog));
       });
     } else {
       container.innerHTML = '<p class="text-muted">No blogs published yet.</p>';
     }
   } catch (error) {
-    console.warn('⚠️ Fetching blogs failed. Loading local static presentation fallbacks.', error);
     container.innerHTML = '';
-    const recent = fallbackBlogs.slice(0, 3);
-    recent.forEach(blog => {
-      const card = createBlogCard(blog);
-      container.appendChild(card);
+    fallbackBlogs.slice(0, 3).forEach(blog => {
+      container.appendChild(createBlogCard(blog));
     });
   }
 }
 
-// 2. BLOGS LISTING: Fetch and render blogs
 async function loadBlogs(searchQuery = '') {
   const gridContainer = document.getElementById('blogs-grid-container');
   const resultsInfo = document.getElementById('results-info-text');
@@ -144,8 +130,7 @@ async function loadBlogs(searchQuery = '') {
 
       if (data.blogs.length > 0) {
         data.blogs.forEach(blog => {
-          const card = createBlogCard(blog);
-          gridContainer.appendChild(card);
+          gridContainer.appendChild(createBlogCard(blog));
         });
       } else {
         gridContainer.innerHTML = `
@@ -157,7 +142,6 @@ async function loadBlogs(searchQuery = '') {
       }
     }
   } catch (error) {
-    console.warn('⚠️ Fetching blogs listing failed. Loading local static search and fallbacks.', error);
     gridContainer.innerHTML = '';
     
     if (resultsInfo) {
@@ -179,8 +163,7 @@ async function loadBlogs(searchQuery = '') {
 
     if (filtered.length > 0) {
       filtered.forEach(blog => {
-        const card = createBlogCard(blog);
-        gridContainer.appendChild(card);
+        gridContainer.appendChild(createBlogCard(blog));
       });
     } else {
       gridContainer.innerHTML = `
@@ -193,12 +176,10 @@ async function loadBlogs(searchQuery = '') {
   }
 }
 
-// 3. BLOG DETAIL: Load single blog content
 async function loadBlogDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   let slug = urlParams.get('slug');
 
-  // Also support clean pathname format: /blogs/:slug or /blog/:slug
   if (!slug) {
     const pathParts = window.location.pathname.split('/').filter(Boolean);
     if (pathParts.length >= 2 && (pathParts[0] === 'blogs' || pathParts[0] === 'blog')) {
@@ -222,43 +203,30 @@ async function loadBlogDetail() {
 
     if (data.success && data.blog) {
       const blog = data.blog;
-      
       document.title = `${blog.title} | Doorway to Acceptance (DTA)`;
       if (titleEl) titleEl.innerText = blog.title;
       if (dateEl) dateEl.innerText = formatDate(blog.created_at);
-      
       if (bannerEl) {
         bannerEl.src = blog.image_url || '/images/blog-placeholder.jpg';
         bannerEl.alt = blog.title;
       }
-      
-      if (contentEl) {
-        contentEl.innerHTML = blog.body;
-      }
-
-      // Setup 1-Click Social Sharing
+      if (contentEl) contentEl.innerHTML = blog.body;
       setupSocialShareButtons(blog.title);
     } else {
       showNotification('Blog post not found.', 'error');
       setTimeout(() => window.location.href = '/blogs', 2000);
     }
   } catch (error) {
-    console.warn('⚠️ Fetching blog details failed. Loading local static content matching slug.', error);
     const localBlog = fallbackBlogs.find(b => b.slug === slug);
     if (localBlog) {
       document.title = `${localBlog.title} | Doorway to Acceptance (DTA)`;
       if (titleEl) titleEl.innerText = localBlog.title;
       if (dateEl) dateEl.innerText = formatDate(localBlog.created_at);
-      
       if (bannerEl) {
         bannerEl.src = localBlog.image_url;
         bannerEl.alt = localBlog.title;
       }
-      
-      if (contentEl) {
-        contentEl.innerHTML = localBlog.body;
-      }
-
+      if (contentEl) contentEl.innerHTML = localBlog.body;
       setupSocialShareButtons(localBlog.title);
     } else {
       if (contentEl) {
@@ -268,7 +236,6 @@ async function loadBlogDetail() {
   }
 }
 
-// 1-Click Social Share Handler
 function setupSocialShareButtons(title) {
   const currentUrl = encodeURIComponent(window.location.href);
   const encodedTitle = encodeURIComponent(title || document.title);
@@ -310,7 +277,6 @@ function setupSocialShareButtons(title) {
   }
 }
 
-// Card Builder Helper
 function createBlogCard(blog) {
   const card = document.createElement('div');
   card.className = 'blog-card animate-fade';
@@ -331,8 +297,8 @@ function createBlogCard(blog) {
   return card;
 }
 
-// Simple HTML escaping
 function escapeHTML(str) {
+  if (!str) return '';
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

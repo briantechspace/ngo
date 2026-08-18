@@ -9,7 +9,6 @@ require('dotenv').config();
 const db = require('./db');
 const { upload, getUploadedFileUrl } = require('./cloudinary');
 
-// Dynamic production optional modules
 let compression = null;
 let helmet = null;
 let rateLimit = null;
@@ -21,32 +20,27 @@ try { rateLimit = require('express-rate-limit'); } catch (_) {}
 const app = express();
 const PORT = process.env.PORT || 5055;
 
-// Trust reverse proxies (Nginx, Render, Heroku, Cloudflare, AWS ALB)
 app.set('trust proxy', 1);
 
-// Optional gzip compression
 if (compression) {
   app.use(compression());
 }
 
-// Security Headers: Helmet or Built-in Headers
 if (helmet) {
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https://js.paystack.co", "https://cdn.quilljs.com", "https://cdnjs.cloudflare.com"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.quilljs.com"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.quilljs.com", "https://cdn.jsdelivr.net"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.quilljs.com", "https://cdn.jsdelivr.net"],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-        imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://*.paystack.co", "https://*.paystack.com"],
-        frameSrc: ["'self'", "https://js.paystack.co", "https://checkout.paystack.com"],
-        connectSrc: ["'self'", "https://api.paystack.co", "https://*.paystack.co"]
+        imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com"],
+        connectSrc: ["'self'"]
       }
     },
     crossOriginEmbedderPolicy: false
   }));
 } else {
-  // Built-in standard security headers fallback
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
@@ -59,7 +53,6 @@ if (helmet) {
   });
 }
 
-// Rate Limiter Factory (supports express-rate-limit or built-in in-memory token bucket)
 function createRateLimiter(windowMs, maxRequests, message) {
   if (rateLimit) {
     return rateLimit({
@@ -86,7 +79,6 @@ function createRateLimiter(windowMs, maxRequests, message) {
 
     hits.set(ip, record);
 
-    // Prune old records periodically
     if (hits.size > 3000) {
       for (const [k, v] of hits.entries()) {
         if (now > v.resetTime) hits.delete(k);
@@ -104,20 +96,15 @@ const authLimiter = createRateLimiter(15 * 60 * 1000, 10, 'Too many login attemp
 const submitLimiter = createRateLimiter(10 * 60 * 1000, 15, 'Too many submissions from this IP. Please wait a few minutes.');
 const generalApiLimiter = createRateLimiter(10 * 60 * 1000, 300, 'Too many requests. Please slow down.');
 
-// Apply general limiter to all /api/ endpoints
 app.use('/api', generalApiLimiter);
-
-// Middleware for all routes
 app.use(cors());
 app.use(bodyParser.json({ limit: '2mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '2mb' }));
 
-// Static asset caching in production
 const staticOptions = process.env.NODE_ENV === 'production'
   ? { maxAge: '1d', etag: true }
   : {};
 
-// Clean URL redirect middleware: 301 redirects /path.html to /path
 app.use((req, res, next) => {
   if (req.path.endsWith('.html')) {
     if (req.path === '/index.html') {
@@ -131,30 +118,24 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static frontend assets (css, js, images, uploads)
 app.use(express.static(path.join(__dirname, 'public'), {
   extensions: ['html'],
   ...staticOptions
 }));
-// Support serving uploaded images locally if Cloudinary is not used
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), staticOptions));
 
-// --- Password Hashing & Verification Helper ---
 function verifyPassword(inputPassword, storedHashOrPlain) {
   if (!inputPassword || !storedHashOrPlain) return false;
 
   const rawInput = inputPassword.toString().trim();
   let rawStored = storedHashOrPlain.toString().trim();
 
-  // Strip wrapping quotes if present in .env
   if ((rawStored.startsWith('"') && rawStored.endsWith('"')) || (rawStored.startsWith("'") && rawStored.endsWith("'"))) {
     rawStored = rawStored.slice(1, -1).trim();
   }
 
-  // Direct match for plain text credentials in .env
   if (rawInput === rawStored) return true;
 
-  // Format: pbkdf2:salt:hash
   if (rawStored.startsWith('pbkdf2:')) {
     const parts = rawStored.split(':');
     if (parts.length === 3) {
@@ -168,7 +149,6 @@ function verifyPassword(inputPassword, storedHashOrPlain) {
   return false;
 }
 
-// --- Auth Session Token Verification Helpers (Built-in Crypto) ---
 function generateToken() {
   const payload = JSON.stringify({ user: 'admin', exp: Date.now() + 24 * 60 * 60 * 1000 });
   const signature = crypto.createHmac('sha256', process.env.JWT_SECRET || 'fallback_secret_session_key')
@@ -195,7 +175,6 @@ function verifyToken(token) {
   }
 }
 
-// Middleware to protect admin routes
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -209,20 +188,16 @@ function authMiddleware(req, res, next) {
   }
 }
 
-// --- Phone Number Formatter for Kenyan M-PESA ---
 function normalizeKenyanPhone(phone) {
   if (!phone) return null;
   let cleaned = phone.toString().replace(/[\s\-\(\)\+]/g, '');
 
-  // 07XXXXXXXX -> 2547XXXXXXXX or 01XXXXXXXX -> 2541XXXXXXXX
   if (/^0[17]\d{8}$/.test(cleaned)) {
     return '254' + cleaned.slice(1);
   }
-  // 7XXXXXXXX or 1XXXXXXXX -> 2547XXXXXXXX / 2541XXXXXXXX
   if (/^[17]\d{8}$/.test(cleaned)) {
     return '254' + cleaned;
   }
-  // 2547XXXXXXXX or 2541XXXXXXXX (12 digits)
   if (/^254[17]\d{8}$/.test(cleaned)) {
     return cleaned;
   }
@@ -232,14 +207,12 @@ function normalizeKenyanPhone(phone) {
   return null;
 }
 
-// --- UpesiPay M-PESA STK Push Helper ---
 function initiateUpesiPayCollection({ channel_id, phone_number, amount, callback_url }) {
   return new Promise((resolve, reject) => {
     const authToken = process.env.UPESIPAY_AUTH_TOKEN;
 
-    // Simulation / Local Offline Mode when no live auth token is provided
     if (!authToken || authToken.includes('your_basic_auth_token') || authToken === 'mock') {
-      console.log(`ℹ️ [UpesiPay Mock] Simulating STK Push to ${phone_number} for KES ${amount}`);
+      console.log(`ℹ️ [UpesiPay Demo] Simulating STK Push to ${phone_number} for KES ${amount}`);
       const mockCheckoutId = 'ws_CO_' + Date.now() + Math.floor(Math.random() * 100000);
       const mockMerchantId = 'dta-' + Date.now().toString(36);
       return resolve({
@@ -306,9 +279,6 @@ function initiateUpesiPayCollection({ channel_id, phone_number, amount, callback
   });
 }
 
-// --- API ENDPOINTS ---
-
-// Health check endpoint for uptime monitors, kubernetes, or load balancers
 app.get('/api/health', (req, res) => {
   const isPostgres = db.isPostgresConnected();
   const uptimeSeconds = Math.floor(process.uptime());
@@ -320,7 +290,7 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     database: {
-      type: 'postgresql',
+      type: isPostgres ? 'postgresql' : 'local_json',
       connected: isPostgres
     },
     storage: (process.env.CLOUDINARY_CLOUD_NAME && !process.env.CLOUDINARY_CLOUD_NAME.includes('your_cloud_name')) ? 'cloudinary' : 'local',
@@ -331,7 +301,6 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Admin Login Endpoint (Protected by rate limiting & timing-safe password check)
 app.post('/api/admin/login', authLimiter, (req, res) => {
   let { username, password } = req.body;
   username = (username || '').toString().trim();
@@ -346,15 +315,12 @@ app.post('/api/admin/login', authLimiter, (req, res) => {
 
   if (username.toLowerCase() === correctUser.toLowerCase() && verifyPassword(password, correctPass)) {
     const token = generateToken();
-    console.log(`🔑 Admin authenticated successfully as: ${username}`);
     return res.json({ success: true, token });
   }
 
-  console.log(`⚠️ Invalid admin login attempt with username: "${username}"`);
   return res.status(401).json({ success: false, message: 'Invalid username or password.' });
 });
 
-// 1. PUBLIC: Fetch Payment Gateway Config (UpesiPay M-PESA)
 app.get('/api/config/payment', (req, res) => {
   const channelId = process.env.UPESIPAY_CHANNEL_ID;
   const isConfigured = !!(channelId && !channelId.includes('your_channel_id') && process.env.UPESIPAY_AUTH_TOKEN && !process.env.UPESIPAY_AUTH_TOKEN.includes('your_basic_auth_token'));
@@ -366,12 +332,10 @@ app.get('/api/config/payment', (req, res) => {
   });
 });
 
-// Legacy Paystack config alias for backward compatibility
 app.get('/api/config/paystack', (req, res) => {
   res.json({ publicKey: 'upesipay_mpesa_mode' });
 });
 
-// 1.5 PUBLIC: Check upload mode (Cloudinary vs local)
 app.get('/api/config/upload-mode', (req, res) => {
   const isCloudinary = !!(
     process.env.CLOUDINARY_CLOUD_NAME &&
@@ -382,19 +346,16 @@ app.get('/api/config/upload-mode', (req, res) => {
   res.json({ cloudinary: isCloudinary, storage: isCloudinary ? 'cloudinary' : 'local' });
 });
 
-// 2. BLOGS: Fetch all blogs (supports search query '?search=something')
 app.get('/api/blogs', async (req, res) => {
   try {
     const search = req.query.search || '';
     const blogs = await db.getBlogs(search);
     res.json({ success: true, count: blogs.length, blogs });
   } catch (error) {
-    console.error('Error fetching blogs:', error);
     res.status(500).json({ success: false, message: 'Server error fetching blogs.' });
   }
 });
 
-// 3. BLOGS: Fetch single blog by slug
 app.get('/api/blogs/:slug', async (req, res) => {
   try {
     const blog = await db.getBlogBySlug(req.params.slug);
@@ -403,16 +364,13 @@ app.get('/api/blogs/:slug', async (req, res) => {
     }
     res.json({ success: true, blog });
   } catch (error) {
-    console.error('Error fetching blog:', error);
     res.status(500).json({ success: false, message: 'Server error fetching blog details.' });
   }
 });
 
-// 4. BLOGS: Upload image & create new blog post (Admin protected)
 app.post('/api/blogs', authMiddleware, upload.single('image'), async (req, res) => {
   try {
     const { title, body } = req.body;
-    
     if (!title || !body) {
       return res.status(400).json({ success: false, message: 'Title and body are required.' });
     }
@@ -422,16 +380,13 @@ app.post('/api/blogs', authMiddleware, upload.single('image'), async (req, res) 
 
     res.status(201).json({ success: true, message: 'Blog created successfully!', blog: newBlog });
   } catch (error) {
-    console.error('Error creating blog:', error);
     res.status(500).json({ success: false, message: 'Server error creating blog.' });
   }
 });
 
-// 5. SUPPORT: Submit support request (Protected by submitLimiter)
 app.post('/api/support', submitLimiter, async (req, res) => {
   try {
     const { name, email, phone, message } = req.body;
-
     if (!name || !email || !phone || !message) {
       return res.status(400).json({ success: false, message: 'All form fields are required.' });
     }
@@ -443,12 +398,10 @@ app.post('/api/support', submitLimiter, async (req, res) => {
       data: savedMessage 
     });
   } catch (error) {
-    console.error('Error saving support message:', error);
     res.status(500).json({ success: false, message: 'Server error submitting support request.' });
   }
 });
 
-// 5.5 NEWSLETTER: Subscribe (Protected by submitLimiter)
 app.post('/api/newsletter/subscribe', submitLimiter, async (req, res) => {
   try {
     const { email } = req.body;
@@ -457,21 +410,16 @@ app.post('/api/newsletter/subscribe', submitLimiter, async (req, res) => {
     }
 
     const result = await db.saveSubscriber(email);
-
     if (result.duplicate) {
       return res.json({ success: true, message: 'You are already subscribed. Thank you!' });
     }
 
-    console.log(`📧 New newsletter subscriber: ${email}`);
     res.status(201).json({ success: true, message: 'Thank you for subscribing to our newsletter!' });
   } catch (error) {
-    console.error('Error saving subscriber:', error);
     res.status(500).json({ success: false, message: 'Server error. Please try again.' });
   }
 });
 
-
-// 6. PAYMENTS: Initiate UpesiPay M-PESA STK Push
 app.post('/api/donation/initiate', submitLimiter, async (req, res) => {
   try {
     const { donor_name, donor_email, donor_phone, amount, isAnonymous } = req.body;
@@ -496,7 +444,6 @@ app.post('/api/donation/initiate', submitLimiter, async (req, res) => {
     const channelId = parseInt(process.env.UPESIPAY_CHANNEL_ID || '1', 10);
     const callbackUrl = process.env.UPESIPAY_CALLBACK_URL || `${req.protocol}://${req.get('host')}/api/donation/webhook`;
 
-    // Initiate M-PESA STK Push with UpesiPay
     const upesiResponse = await initiateUpesiPayCollection({
       channel_id: channelId,
       phone_number: normalizedPhone,
@@ -509,8 +456,7 @@ app.post('/api/donation/initiate', submitLimiter, async (req, res) => {
       const checkoutRequestId = data.checkout_request_id || `ws_CO_${Date.now()}`;
       const merchantRequestId = data.merchant_request_id || `merch_${Date.now()}`;
 
-      // Record pending donation in database
-      const donation = await db.upsertDonation({
+      await db.upsertDonation({
         donor_name: isAnonymous ? 'Anonymous' : (donor_name || 'Anonymous'),
         donor_email: isAnonymous ? `anon_${Date.now()}@dta-ngo.org` : (donor_email || 'supporter@dta-ngo.org'),
         donor_phone: normalizedPhone,
@@ -518,8 +464,6 @@ app.post('/api/donation/initiate', submitLimiter, async (req, res) => {
         reference: checkoutRequestId,
         status: 'pending'
       });
-
-      console.log(`📱 M-PESA STK Push initiated: ${checkoutRequestId} | KES ${numericAmount} | Phone: ${normalizedPhone}`);
 
       return res.status(200).json({
         success: true,
@@ -534,7 +478,6 @@ app.post('/api/donation/initiate', submitLimiter, async (req, res) => {
         _mock: !!upesiResponse._mock
       });
     } else {
-      console.warn('⚠️ UpesiPay STK push error:', upesiResponse);
       const statusCode = upesiResponse.status_code || 400;
       return res.status(statusCode).json({
         success: false,
@@ -544,12 +487,10 @@ app.post('/api/donation/initiate', submitLimiter, async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error initiating UpesiPay STK push:', error);
     res.status(500).json({ success: false, message: 'Server error initiating M-PESA payment. Please try again.' });
   }
 });
 
-// 6.2 PAYMENTS: Check Status of M-PESA STK Push
 app.get('/api/donation/status/:checkoutRequestId', async (req, res) => {
   try {
     const { checkoutRequestId } = req.params;
@@ -561,23 +502,19 @@ app.get('/api/donation/status/:checkoutRequestId', async (req, res) => {
 
     res.json({
       success: true,
-      status: donation.status, // 'pending', 'success', 'failed', 'cancelled', 'timeout'
+      status: donation.status,
       amount: donation.amount,
       reference: donation.reference,
       donor_name: donation.donor_name
     });
   } catch (error) {
-    console.error('Error checking donation status:', error);
     res.status(500).json({ success: false, message: 'Error checking transaction status.' });
   }
 });
 
-// 6.3 PAYMENTS: UpesiPay Webhook Callback Handler
 app.post(['/api/donation/webhook', '/api/donate/webhook'], async (req, res) => {
   try {
     const payload = req.body;
-    console.log('📦 UpesiPay Webhook Received:', JSON.stringify(payload));
-
     const { merchant_request_id, checkout_request_id, reference_id, status } = payload;
     const lookupRef = checkout_request_id || reference_id || merchant_request_id;
 
@@ -585,17 +522,12 @@ app.post(['/api/donation/webhook', '/api/donate/webhook'], async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing transaction identifiers.' });
     }
 
-    // Normalize UpesiPay status: 'success', 'failed', 'cancelled', 'timeout'
     let normalizedStatus = 'pending';
     if (status === 'success') normalizedStatus = 'success';
     else if (['failed', 'cancelled', 'timeout'].includes(status)) normalizedStatus = 'failed';
 
     const updated = await db.updateDonationStatus(lookupRef, normalizedStatus);
-
-    if (updated) {
-      console.log(`✅ Webhook: Donation ${lookupRef} updated to status: ${normalizedStatus}`);
-    } else {
-      console.log(`ℹ️ Webhook: Reference ${lookupRef} not yet in DB, creating record.`);
+    if (!updated) {
       await db.upsertDonation({
         donor_name: 'M-PESA Supporter',
         donor_email: 'mpesa_donor@dta-ngo.org',
@@ -606,15 +538,12 @@ app.post(['/api/donation/webhook', '/api/donate/webhook'], async (req, res) => {
       });
     }
 
-    // UpesiPay requires HTTP 200/204 acknowledgement
     res.status(200).json({ success: true, message: 'Webhook callback processed successfully.' });
   } catch (error) {
-    console.error('Error handling UpesiPay webhook callback:', error);
     res.status(500).json({ success: false, message: 'Server error processing webhook.' });
   }
 });
 
-// 6.4 PAYMENTS: Local Simulation Confirmation (for testing and offline demo)
 app.post('/api/donation/simulate-confirm', async (req, res) => {
   try {
     const { checkout_request_id } = req.body;
@@ -624,18 +553,15 @@ app.post('/api/donation/simulate-confirm', async (req, res) => {
 
     const updated = await db.updateDonationStatus(checkout_request_id, 'success');
     if (updated) {
-      console.log(`🎉 [Simulation] Donation confirmed: ${checkout_request_id} | KES ${updated.amount}`);
       res.json({ success: true, message: 'M-PESA transaction simulated successfully!', donation: updated });
     } else {
       res.status(404).json({ success: false, message: 'Transaction not found.' });
     }
   } catch (error) {
-    console.error('Error simulating confirmation:', error);
     res.status(500).json({ success: false, message: 'Error in simulation.' });
   }
 });
 
-// 6.5 DONATIONS: Fetch Official Donor Receipt & Tax Certificate Data
 app.get('/api/donations/receipt/:reference', async (req, res) => {
   try {
     const { reference } = req.params;
@@ -649,24 +575,39 @@ app.get('/api/donations/receipt/:reference', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Donation receipt record not found.' });
     }
 
-    const receiptNumber = `DTA-REC-${new Date(donation.created_at).getFullYear()}${(new Date(donation.created_at).getMonth() + 1).toString().padStart(2, '0')}-${donation.id.toString().padStart(4, '0')}`;
+    const receiptDate = new Date(donation.created_at || Date.now());
+    const dateFormatted = receiptDate.toLocaleDateString('en-GB', {
+      timeZone: 'Africa/Nairobi',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const timeFormatted = receiptDate.toLocaleTimeString('en-GB', {
+      timeZone: 'Africa/Nairobi',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+
+    const receiptNumber = `DTA-REC-${receiptDate.getFullYear()}${(receiptDate.getMonth() + 1).toString().padStart(2, '0')}-${donation.id.toString().padStart(4, '0')}`;
 
     res.json({
       success: true,
       receipt: {
         receiptNumber,
-        donationId: donation.id,
-        donorName: donation.donor_name || 'Valued Supporter',
-        donorEmail: donation.donor_email || '',
-        donorPhone: donation.donor_phone || '',
-        amount: parseFloat(donation.amount || 0),
-        currency: donation.currency || 'KES',
         reference: donation.reference,
+        donorName: donation.donor_name || 'Anonymous Donor',
+        donorEmail: donation.donor_email || 'N/A',
+        donorPhone: donation.donor_phone || 'N/A',
+        amount: parseFloat(donation.amount),
+        currency: donation.currency || 'KES',
         status: donation.status,
-        date: donation.created_at,
+        date: dateFormatted,
+        time: timeFormatted,
+        timezone: 'EAT (UTC+3)',
         organization: {
           name: 'Doorway to Acceptance (DTA) NGO',
-          registrationNo: 'OP.218/051/20-291/12480',
+          regNo: 'OP.218/051/20-291/12480',
           taxExemptNo: 'KRA-PIN-P051982341Z',
           address: 'Nairobi, Kenya',
           email: 'doorwaytoacceptance@yahoo.com',
@@ -676,16 +617,13 @@ app.get('/api/donations/receipt/:reference', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching donation receipt:', error);
     res.status(500).json({ success: false, message: 'Server error generating receipt.' });
   }
 });
 
-// 6.9 PUBLIC: Total raised (no auth required - for donation page display)
 app.get('/api/public/stats', async (req, res) => {
   try {
     const stats = await db.getDashboardStats();
-    // Only expose safe public data
     res.json({
       success: true,
       stats: {
@@ -694,45 +632,37 @@ app.get('/api/public/stats', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error loading public stats:', error);
     res.status(500).json({ success: false, message: 'Server error.' });
   }
 });
 
-// 7. ADMIN: Retrieve full dashboard stats
 app.get('/api/admin/stats', authMiddleware, async (req, res) => {
   try {
     const stats = await db.getDashboardStats();
     res.json({ success: true, stats });
   } catch (error) {
-    console.error('Error loading dashboard stats:', error);
     res.status(500).json({ success: false, message: 'Server error loading stats.' });
   }
 });
 
-// 8. ADMIN: Retrieve support messages log
 app.get('/api/admin/messages', authMiddleware, async (req, res) => {
   try {
     const messages = await db.getSupportMessages();
     res.json({ success: true, count: messages.length, messages });
   } catch (error) {
-    console.error('Error loading support messages:', error);
     res.status(500).json({ success: false, message: 'Server error loading messages.' });
   }
 });
 
-// 9. ADMIN: Retrieve donations history
 app.get('/api/admin/donations', authMiddleware, async (req, res) => {
   try {
     const donations = await db.getDonations();
     res.json({ success: true, count: donations.length, donations });
   } catch (error) {
-    console.error('Error loading donations history:', error);
     res.status(500).json({ success: false, message: 'Server error loading donations.' });
   }
 });
 
-// 10. ADMIN: Delete a blog post
 app.delete('/api/admin/blogs/:id', authMiddleware, async (req, res) => {
   try {
     const deleted = await db.deleteBlog(req.params.id);
@@ -742,12 +672,10 @@ app.delete('/api/admin/blogs/:id', authMiddleware, async (req, res) => {
       res.status(404).json({ success: false, message: 'Blog post not found.' });
     }
   } catch (error) {
-    console.error('Error deleting blog:', error);
     res.status(500).json({ success: false, message: 'Server error deleting blog post.' });
   }
 });
 
-// 11. ADMIN: Delete a support message
 app.delete('/api/admin/messages/:id', authMiddleware, async (req, res) => {
   try {
     const deleted = await db.deleteSupportMessage(req.params.id);
@@ -757,65 +685,57 @@ app.delete('/api/admin/messages/:id', authMiddleware, async (req, res) => {
       res.status(404).json({ success: false, message: 'Support message not found.' });
     }
   } catch (error) {
-    console.error('Error deleting support message:', error);
     res.status(500).json({ success: false, message: 'Server error deleting support message.' });
   }
 });
 
-// 12. ADMIN: Delete a donation log
 app.delete('/api/admin/donations/:id', authMiddleware, async (req, res) => {
   try {
     const deleted = await db.deleteDonation(req.params.id);
     if (deleted) {
-      res.json({ success: true, message: 'Donation record deleted successfully.' });
+      res.json({ success: true, message: 'Donation ledger record deleted.' });
     } else {
       res.status(404).json({ success: false, message: 'Donation record not found.' });
     }
   } catch (error) {
-    console.error('Error deleting donation:', error);
-    res.status(500).json({ success: false, message: 'Server error deleting donation record.' });
+    res.status(500).json({ success: false, message: 'Server error deleting donation.' });
   }
 });
 
-// 13. ADMIN: List all newsletter subscribers
 app.get('/api/admin/subscribers', authMiddleware, async (req, res) => {
   try {
     const subscribers = await db.getSubscribers();
     res.json({ success: true, count: subscribers.length, subscribers });
   } catch (error) {
-    console.error('Error loading subscribers:', error);
     res.status(500).json({ success: false, message: 'Server error loading subscribers.' });
   }
 });
 
-// 14. ADMIN: Delete a subscriber
 app.delete('/api/admin/subscribers/:id', authMiddleware, async (req, res) => {
   try {
     const deleted = await db.deleteSubscriber(req.params.id);
     if (deleted) {
-      res.json({ success: true, message: 'Subscriber removed successfully.' });
+      res.json({ success: true, message: 'Subscriber removed.' });
     } else {
       res.status(404).json({ success: false, message: 'Subscriber not found.' });
     }
   } catch (error) {
-    console.error('Error deleting subscriber:', error);
     res.status(500).json({ success: false, message: 'Server error deleting subscriber.' });
   }
 });
 
-// 15. ADMIN: Get single blog post by ID for editing
 app.get('/api/admin/blogs/:id', authMiddleware, async (req, res) => {
   try {
     const blog = await db.getBlogById(req.params.id);
-    if (!blog) return res.status(404).json({ success: false, message: 'Blog post not found.' });
+    if (!blog) {
+      return res.status(404).json({ success: false, message: 'Blog article not found.' });
+    }
     res.json({ success: true, blog });
   } catch (error) {
-    console.error('Error loading blog by ID:', error);
-    res.status(500).json({ success: false, message: 'Server error loading blog.' });
+    res.status(500).json({ success: false, message: 'Server error fetching blog article.' });
   }
 });
 
-// 16. ADMIN: Edit / Update existing blog post (with optional cover image replacement)
 app.put('/api/admin/blogs/:id', authMiddleware, upload.single('image'), async (req, res) => {
   try {
     const { title, body } = req.body;
@@ -823,53 +743,50 @@ app.put('/api/admin/blogs/:id', authMiddleware, upload.single('image'), async (r
       return res.status(400).json({ success: false, message: 'Title and body are required.' });
     }
 
-    const imageUrl = req.file ? getUploadedFileUrl(req) : undefined;
-    const updatedBlog = await db.updateBlog(req.params.id, { title, body, imageUrl });
+    const imageUrl = req.file ? getUploadedFileUrl(req) : null;
+    const updated = await db.updateBlog(req.params.id, { title, body, imageUrl });
 
-    if (!updatedBlog) {
-      return res.status(404).json({ success: false, message: 'Blog post not found.' });
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Blog article not found.' });
     }
 
-    console.log(`📝 Blog updated: #${req.params.id} "${title}"`);
-    res.json({ success: true, message: 'Blog article updated successfully!', blog: updatedBlog });
+    res.json({ success: true, message: 'Blog article updated successfully!', blog: updated });
   } catch (error) {
-    console.error('Error updating blog post:', error);
-    res.status(500).json({ success: false, message: 'Server error updating blog post.' });
+    res.status(500).json({ success: false, message: 'Server error updating blog article.' });
   }
 });
 
-// 17. ADMIN: Manual Donation Entry (Bank Transfer / Cash / Paybill Offline Grant)
 app.post('/api/admin/donations/manual', authMiddleware, async (req, res) => {
   try {
-    const { donor_name, donor_email, donor_phone, amount, payment_method, notes } = req.body;
+    const { donor_name, donor_email, donor_phone, amount, payment_method } = req.body;
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
       return res.status(400).json({ success: false, message: 'Valid donation amount is required.' });
     }
 
-    const reference = `MANUAL-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 1000)}`;
+    const prefix = (payment_method || 'OFFLINE').toUpperCase().slice(0, 4);
+    const manualRef = `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 1000)}`;
+
     const saved = await db.saveDonation({
-      donor_name: donor_name || 'Anonymous Donor',
-      donor_email: donor_email || 'manual_entry@dta-ngo.org',
-      donor_phone: donor_phone || '',
+      donor_name: donor_name || 'Anonymous Contributor',
+      donor_email: donor_email || 'offline_donor@dta-ngo.org',
+      donor_phone: donor_phone || 'N/A',
       amount: parseFloat(amount),
-      reference,
+      reference: manualRef,
       status: 'success'
     });
 
-    console.log(`💰 Manual donation added: ${reference} | KES ${amount} | Method: ${payment_method || 'Manual'}`);
     res.status(201).json({ success: true, message: 'Manual donation recorded successfully!', donation: saved });
   } catch (error) {
-    console.error('Error adding manual donation:', error);
-    res.status(500).json({ success: false, message: 'Server error saving manual donation.' });
+    res.status(500).json({ success: false, message: 'Server error recording manual donation.' });
   }
 });
 
-// 18. ADMIN: Override Donation Status (Mark Success / Failed / Refunded)
 app.patch('/api/admin/donations/:id/status', authMiddleware, async (req, res) => {
   try {
     const { status } = req.body;
-    if (!['success', 'pending', 'failed', 'refunded', 'cancelled'].includes(status)) {
-      return res.status(400).json({ success: false, message: 'Invalid status provided.' });
+    const validStatuses = ['success', 'pending', 'failed', 'refunded'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
     }
 
     const updated = await db.updateDonationStatusById(req.params.id, status);
@@ -877,15 +794,12 @@ app.patch('/api/admin/donations/:id/status', authMiddleware, async (req, res) =>
       return res.status(404).json({ success: false, message: 'Donation record not found.' });
     }
 
-    console.log(`⚡ Donation #${req.params.id} status overridden to: ${status}`);
     res.json({ success: true, message: `Donation status updated to ${status}.`, donation: updated });
   } catch (error) {
-    console.error('Error overriding donation status:', error);
     res.status(500).json({ success: false, message: 'Server error updating donation status.' });
   }
 });
 
-// 19. ADMIN: Newsletter Broadcast Composer
 app.post('/api/admin/newsletter/broadcast', authMiddleware, async (req, res) => {
   try {
     const { subject, message } = req.body;
@@ -894,20 +808,16 @@ app.post('/api/admin/newsletter/broadcast', authMiddleware, async (req, res) => 
     }
 
     const subscribers = await db.getSubscribers();
-    console.log(`📢 Newsletter Broadcast queued: "${subject}" to ${subscribers.length} subscriber(s).`);
-
     res.json({
       success: true,
       message: `Broadcast message queued successfully for ${subscribers.length} subscriber(s)!`,
       recipient_count: subscribers.length
     });
   } catch (error) {
-    console.error('Error broadcasting newsletter:', error);
     res.status(500).json({ success: false, message: 'Server error broadcasting newsletter.' });
   }
 });
 
-// 20. ADMIN: System Diagnostics & Health Metrics
 app.get('/api/admin/system/diagnostics', authMiddleware, async (req, res) => {
   try {
     const isPostgres = db.isPostgresConnected();
@@ -932,12 +842,10 @@ app.get('/api/admin/system/diagnostics', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching diagnostics:', error);
     res.status(500).json({ success: false, message: 'Server error fetching diagnostics.' });
   }
 });
 
-// 21. ADMIN: One-Click CSV Data Export
 app.get('/api/admin/export/:type', authMiddleware, async (req, res) => {
   try {
     const { type } = req.params;
@@ -967,12 +875,10 @@ app.get('/api/admin/export/:type', authMiddleware, async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.status(200).send(csvData);
   } catch (error) {
-    console.error('Error exporting data to CSV:', error);
     res.status(500).json({ success: false, message: 'Server error exporting CSV data.' });
   }
 });
 
-// --- Clean Page Serving Endpoints (No .html extension in URL) ---
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/home', (req, res) => res.redirect(301, '/'));
 app.get('/about', (req, res) => res.sendFile(path.join(__dirname, 'public', 'about.html')));
@@ -983,29 +889,21 @@ app.get('/blog-detail', (req, res) => res.sendFile(path.join(__dirname, 'public'
 app.get('/receipt', (req, res) => res.sendFile(path.join(__dirname, 'public', 'receipt.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 
-// Fallback to home page for any other unmatched frontend route
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start Server
 const server = app.listen(PORT, () => {
-  console.log(`🚀 NGO Backend running in ${process.env.NODE_ENV || 'development'} mode on http://localhost:${PORT}`);
+  console.log(`🚀 NGO Backend running on http://localhost:${PORT}`);
 });
 
-// Graceful Shutdown handling (SIGTERM, SIGINT)
 async function handleShutdown(signal) {
-  console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
   server.close(async () => {
-    console.log('HTTP server connections closed.');
     await db.closePool();
-    console.log('PostgreSQL connections closed. Exiting process cleanly.');
     process.exit(0);
   });
 
-  // Force close after 10s if connections remain stuck
   setTimeout(() => {
-    console.error('⚠️ Forcefully terminating process after 10s timeout.');
     process.exit(1);
   }, 10000);
 }

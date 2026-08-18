@@ -1,31 +1,22 @@
-/**
- * Doorway to Acceptance (DTA) - Super Admin Dashboard Client
- * Complete administrative powers: Blog Editor & Management, Donation Log,
- * Status Overrides, Manual Offline Entries, CSV Exports, Broadcast Center,
- * and Live System Diagnostics.
- */
-
 let quillEditor = null;
 let editQuillEditor = null;
 let currentDonations = [];
 let currentMessages = [];
 let currentSubscribers = [];
+let trendChart = null;
+let statusChart = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   const token = localStorage.getItem('dta_admin_token');
-  const loginContainer = document.getElementById('admin-login-container');
-  const dashboardContainer = document.getElementById('admin-dashboard-container');
   const loginForm = document.getElementById('admin-login-form');
   const logoutBtn = document.getElementById('admin-logout-btn');
 
-  // Check login state
   if (token) {
     showDashboard();
   } else {
     showLogin();
   }
 
-  // Handle Admin Login
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -55,7 +46,6 @@ document.addEventListener('DOMContentLoaded', () => {
           showNotification(data.message || 'Invalid credentials.', 'error');
         }
       } catch (err) {
-        console.error('Login network error:', err);
         showNotification('Unable to reach server. Please check your connection.', 'error');
       } finally {
         if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Access Portal'; }
@@ -67,7 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Handle Logout
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
       localStorage.removeItem('dta_admin_token');
@@ -76,37 +65,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Initialize Tab Navigation
   initTabs();
-
-  // Initialize Blog Editor Drop Zone & Form
   initBlogEditor();
-
-  // Initialize Search & Filter Listeners
   initSearchAndFilters();
-
-  // Initialize CSV Export Handlers
   initCsvExports();
-
-  // Initialize Newsletter Broadcast Composer
   initBroadcastComposer();
-
-  // Initialize Manual Donation Dialog
   initManualDonationModal();
-
-  // Initialize Edit Blog Modal
   initEditBlogModal();
 
-  // Initialize Diagnostics Refresh
   const refreshDiagBtn = document.getElementById('refresh-diagnostics-btn');
   if (refreshDiagBtn) {
     refreshDiagBtn.addEventListener('click', loadSystemDiagnostics);
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AUTH VIEW TOGGLING
-// ─────────────────────────────────────────────────────────────────────────────
 function showLogin() {
   document.getElementById('admin-login-container').style.display = 'flex';
   document.getElementById('admin-dashboard-container').style.display = 'none';
@@ -118,9 +90,7 @@ function showDashboard() {
 
   try {
     initQuillEditors();
-  } catch (e) {
-    console.warn('Quill editor init note:', e);
-  }
+  } catch (e) {}
 
   try { checkUploadMode(); } catch (e) {}
   try { loadDashboardStats(); } catch (e) {}
@@ -138,9 +108,6 @@ function getAuthHeaders() {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TABS NAVIGATION
-// ─────────────────────────────────────────────────────────────────────────────
 function initTabs() {
   const tabBtns = document.querySelectorAll('.admin-tab-btn');
   tabBtns.forEach(btn => {
@@ -160,9 +127,6 @@ function initTabs() {
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// QUILL RICH TEXT EDITORS
-// ─────────────────────────────────────────────────────────────────────────────
 function initQuillEditors() {
   if (!quillEditor && document.getElementById('blog-quill-editor')) {
     quillEditor = new Quill('#blog-quill-editor', {
@@ -197,9 +161,6 @@ function initQuillEditors() {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CHECK UPLOAD MODE
-// ─────────────────────────────────────────────────────────────────────────────
 async function checkUploadMode() {
   const badge = document.getElementById('cloudinary-status');
   if (!badge) return;
@@ -220,9 +181,6 @@ async function checkUploadMode() {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DASHBOARD STATS
-// ─────────────────────────────────────────────────────────────────────────────
 async function loadDashboardStats() {
   try {
     const res = await fetch('/api/admin/stats', { headers: getAuthHeaders() });
@@ -247,14 +205,9 @@ async function loadDashboardStats() {
         if (subBadge) subBadge.innerText = `${s.subscribersCount || 0} Recipients`;
       }
     }
-  } catch (err) {
-    console.error('Error loading stats:', err);
-  }
+  } catch (err) {}
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SUPPORT INQUIRIES & SEARCH
-// ─────────────────────────────────────────────────────────────────────────────
 async function loadSupportMessages() {
   const tbody = document.getElementById('admin-messages-tbody');
   if (!tbody) return;
@@ -269,7 +222,6 @@ async function loadSupportMessages() {
       renderSupportMessages(currentMessages);
     }
   } catch (err) {
-    console.error('Error loading messages:', err);
     tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Failed to load inquiries.</td></tr>';
   }
 }
@@ -320,9 +272,6 @@ async function deleteSupportMessage(id) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DONATIONS LOG, STATUS OVERRIDES & ANALYTICS
-// ─────────────────────────────────────────────────────────────────────────────
 async function loadDonations() {
   const tbody = document.getElementById('admin-donations-tbody');
   if (!tbody) return;
@@ -338,12 +287,10 @@ async function loadDonations() {
       renderDonationCharts(currentDonations);
     }
   } catch (err) {
-    console.error('Error loading donations:', err);
     tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Failed to load donations.</td></tr>';
   }
 }
 
-// Helper to get YYYY-MM-DD in East Africa Time (Africa/Nairobi - UTC+3)
 function getEatDateString(dateInput) {
   if (!dateInput) return '';
   const d = new Date(dateInput);
@@ -361,7 +308,6 @@ function getEatDateString(dateInput) {
   }
 }
 
-// Live East Africa Clock
 function updateEatLiveClock() {
   const clockEl = document.getElementById('eat-live-clock');
   if (!clockEl) return;
@@ -396,7 +342,6 @@ function filterAndRenderDonations() {
   const todayEat = getEatDateString(new Date());
   const now = new Date();
 
-  // Handle Preset Calculations based on Africa/Nairobi
   if (preset === 'today') {
     fromDate = todayEat;
     toDate = todayEat;
@@ -410,8 +355,7 @@ function filterAndRenderDonations() {
     if (fromDateInput) fromDateInput.value = yesterdayEat;
     if (toDateInput) toDateInput.value = yesterdayEat;
   } else if (preset === 'this_week') {
-    // Current Monday in EAT
-    const dayOfWeek = (now.getDay() + 6) % 7; // Monday = 0
+    const dayOfWeek = (now.getDay() + 6) % 7;
     const monday = new Date(now.getTime() - (dayOfWeek * 24 * 3600 * 1000));
     fromDate = getEatDateString(monday);
     toDate = todayEat;
@@ -441,17 +385,13 @@ function filterAndRenderDonations() {
   }
 
   let filtered = currentDonations.filter(d => {
-    // 1. Status Filter
     const matchesStatus = status === 'all' || d.status === status;
-
-    // 2. Keyword Query Search
     const matchesQuery = !query || 
       (d.donor_name && d.donor_name.toLowerCase().includes(query)) ||
       (d.donor_email && d.donor_email.toLowerCase().includes(query)) ||
       (d.donor_phone && d.donor_phone.toLowerCase().includes(query)) ||
       (d.reference && d.reference.toLowerCase().includes(query));
 
-    // 3. Date Range Filter in East Africa Time
     const donationEatDate = getEatDateString(d.created_at);
     let matchesDate = true;
     if (fromDate && donationEatDate < fromDate) matchesDate = false;
@@ -460,7 +400,6 @@ function filterAndRenderDonations() {
     return matchesStatus && matchesQuery && matchesDate;
   });
 
-  // Calculate filtered sum
   const filteredSuccessTotal = filtered
     .filter(d => d.status === 'success')
     .reduce((acc, d) => acc + parseFloat(d.amount || 0), 0);
@@ -562,16 +501,11 @@ async function deleteDonationRecord(id) {
   }
 }
 
-// Chart.js Visuals
-let trendChart = null;
-let statusChart = null;
-
 function renderDonationCharts(donations) {
   const trendCanvas = document.getElementById('donationTrendChart');
   const statusCanvas = document.getElementById('donationStatusChart');
   if (!trendCanvas || !statusCanvas || typeof Chart === 'undefined') return;
 
-  // 1. Status count breakdown
   const successCount = donations.filter(d => d.status === 'success').length;
   const pendingCount = donations.filter(d => d.status === 'pending').length;
   const failedCount = donations.filter(d => ['failed', 'cancelled', 'timeout', 'refunded'].includes(d.status)).length;
@@ -607,10 +541,9 @@ function renderDonationCharts(donations) {
     }
   });
 
-  // 2. Trend volume over time (Grouped by date)
   const dateMap = {};
   donations.filter(d => d.status === 'success').forEach(d => {
-    const day = new Date(d.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const day = getEatDateString(d.created_at);
     dateMap[day] = (dateMap[day] || 0) + parseFloat(d.amount || 0);
   });
 
@@ -639,9 +572,6 @@ function renderDonationCharts(donations) {
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MANUAL OFFLINE DONATION DIALOG
-// ─────────────────────────────────────────────────────────────────────────────
 function initManualDonationModal() {
   const openBtn = document.getElementById('open-manual-donation-btn');
   const modal = document.getElementById('manual-donation-modal');
@@ -692,9 +622,6 @@ function initManualDonationModal() {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// BLOG PUBLISHER & EDITING SUITE
-// ─────────────────────────────────────────────────────────────────────────────
 function initBlogEditor() {
   const form = document.getElementById('admin-blog-form');
   const imageInput = document.getElementById('blog-image-input');
@@ -733,9 +660,10 @@ function initBlogEditor() {
       e.preventDefault();
       const title = document.getElementById('blog-title-input').value.trim();
       const body = quillEditor ? quillEditor.root.innerHTML : '';
+      const file = imageInput ? imageInput.files[0] : null;
 
       if (!title || !body || body === '<p><br></p>') {
-        showNotification('Please provide both article title and content.', 'error');
+        showNotification('Please enter both title and article body content.', 'error');
         return;
       }
 
@@ -745,8 +673,6 @@ function initBlogEditor() {
       const formData = new FormData();
       formData.append('title', title);
       formData.append('body', body);
-
-      const file = imageInput ? imageInput.files[0] : null;
       if (file) {
         formData.append('image', file);
       }
@@ -830,7 +756,6 @@ async function deleteAdminBlog(id) {
   }
 }
 
-// Edit Blog Modal Logic
 function initEditBlogModal() {
   const modal = document.getElementById('edit-blog-modal');
   const closeBtn = document.getElementById('close-edit-modal-btn');
@@ -905,9 +830,6 @@ async function openEditBlogModal(blogId) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SUBSCRIBERS & NEWSLETTER BROADCAST COMPOSER
-// ─────────────────────────────────────────────────────────────────────────────
 async function loadSubscribers() {
   const tbody = document.getElementById('admin-subscribers-tbody');
   if (!tbody) return;
@@ -950,7 +872,8 @@ function renderSubscribers(subscribers) {
 }
 
 async function deleteSubscriber(id) {
-  if (!confirm('Are you sure you want to remove this subscriber from the mailing list?')) return;
+  if (!confirm('Are you sure you want to remove this subscriber?')) return;
+
   try {
     const res = await fetch(`/api/admin/subscribers/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
     const data = await res.json();
@@ -992,22 +915,19 @@ function initBroadcastComposer() {
       });
       const data = await res.json();
       if (data.success) {
-        showNotification(data.message || 'Newsletter broadcast dispatched!', 'success');
+        showNotification(data.message || 'Broadcast queued successfully!', 'success');
         form.reset();
       } else {
-        showNotification(data.message || 'Broadcast failed.', 'error');
+        showNotification(data.message || 'Failed to queue broadcast.', 'error');
       }
     } catch (err) {
-      showNotification('Error sending newsletter broadcast.', 'error');
+      showNotification('Error sending broadcast.', 'error');
     } finally {
-      if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = '✉ Send Broadcast to All Subscribers'; }
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = '✉ Dispatch Newsletter Broadcast'; }
     }
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SYSTEM DIAGNOSTICS & ENGINE HEALTH
-// ─────────────────────────────────────────────────────────────────────────────
 async function loadSystemDiagnostics() {
   try {
     const res = await fetch('/api/admin/system/diagnostics', { headers: getAuthHeaders() });
@@ -1032,14 +952,9 @@ async function loadSystemDiagnostics() {
       if (storageEl) storageEl.innerText = d.storage;
       if (nodeEl) nodeEl.innerText = `${d.nodeVersion} (${d.platform})`;
     }
-  } catch (err) {
-    console.warn('Diagnostics load error:', err);
-  }
+  } catch (err) {}
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ONE-CLICK CSV EXPORTS
-// ─────────────────────────────────────────────────────────────────────────────
 function initCsvExports() {
   const exportDonationsBtn = document.getElementById('export-donations-csv-btn');
   const exportMessagesBtn = document.getElementById('export-messages-csv-btn');
@@ -1075,9 +990,6 @@ function initCsvExports() {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SEARCH & FILTER LISTENERS
-// ─────────────────────────────────────────────────────────────────────────────
 function initSearchAndFilters() {
   const donorSearch = document.getElementById('donor-search-input');
   const statusFilter = document.getElementById('donation-status-filter');
@@ -1122,7 +1034,6 @@ function initSearchAndFilters() {
     });
   }
 
-  // East Africa Live Clock
   updateEatLiveClock();
   setInterval(updateEatLiveClock, 1000);
 
@@ -1141,14 +1052,12 @@ function initSearchAndFilters() {
   }
 }
 
-// Session expired handler
 function handleSessionExpired() {
   localStorage.removeItem('dta_admin_token');
   showNotification('Your session has expired. Please log in again.', 'error');
   showLogin();
 }
 
-// Simple HTML escaping helper
 function escapeHTML(str) {
   if (!str) return '';
   return str.toString()

@@ -1,9 +1,3 @@
-/**
- * Doorway to Acceptance (DTA) - UpesiPay M-PESA STK Push Donation Client
- * Handles real-time M-PESA collection initiation, phone normalization,
- * interactive PIN prompt modal, status polling, and live sum updates.
- */
-
 document.addEventListener('DOMContentLoaded', () => {
   const donationForm = document.getElementById('donation-form');
   const presetButtons = document.querySelectorAll('.preset-btn');
@@ -15,10 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const nameGroup = nameInput ? nameInput.closest('.form-group') : null;
   const emailGroup = emailInput ? emailInput.closest('.form-group') : null;
 
-  // 1. Load live raised amount on page load
   loadLiveRaisedSum();
 
-  // 2. Toggle anonymous donation mode
   if (anonymousCheckbox) {
     anonymousCheckbox.addEventListener('change', () => {
       const isAnon = anonymousCheckbox.checked;
@@ -33,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 3. Preset amount button selection
   if (presetButtons && customAmountInput) {
     presetButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -52,7 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 4. Donation form submit handler
   if (donationForm) {
     donationForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -60,14 +50,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const isAnonymous = anonymousCheckbox && anonymousCheckbox.checked;
       const phone = phoneInput ? phoneInput.value.trim() : '';
 
-      // Phone number is required for M-PESA STK Push prompt
       if (!phone) {
         showNotification('Please enter your M-PESA phone number to receive the prompt.', 'error');
         phoneInput && phoneInput.focus();
         return;
       }
 
-      // Validate name/email if not anonymous
       let name = 'Anonymous';
       let email = `anon_${Date.now()}@dta-ngo.org`;
 
@@ -130,7 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
           showNotification(data.message || 'M-PESA prompt sent to your phone!', 'success');
 
-          // Open interactive M-PESA STK Push Waiting Modal
           openMpesaStkModal({
             checkoutId,
             phone: formattedPhone,
@@ -146,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
           showNotification(data.message || 'Could not initiate M-PESA payment. Please verify your phone number.', 'error');
         }
       } catch (err) {
-        console.error('Error initiating UpesiPay donation:', err);
         showNotification('Connection error. Please check your network and try again.', 'error');
       } finally {
         if (submitBtn) {
@@ -158,15 +144,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// INTERACTIVE M-PESA STK MODAL & POLLING
-// ─────────────────────────────────────────────────────────────────────────────
 function openMpesaStkModal({ checkoutId, phone, amount, isMock, onComplete }) {
-  // Remove existing modal if open
   const existingModal = document.getElementById('mpesa-stk-modal-overlay');
   if (existingModal) existingModal.remove();
 
-  // Create overlay container
   const modalOverlay = document.createElement('div');
   modalOverlay.id = 'mpesa-stk-modal-overlay';
   modalOverlay.style.cssText = `
@@ -188,8 +169,6 @@ function openMpesaStkModal({ checkoutId, phone, amount, isMock, onComplete }) {
 
   modalOverlay.innerHTML = `
     <div style="background: #ffffff; width: 100%; max-width: 440px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid #e2e8f0; text-align: center; position: relative;" id="mpesa-modal-card">
-      
-      <!-- Top Brand Header -->
       <div style="background: linear-gradient(135deg, #008751 0%, #00a86b 100%); padding: 24px 20px; color: #ffffff; position: relative;">
         <button id="close-stk-modal-btn" style="position: absolute; right: 16px; top: 16px; background: rgba(0,0,0,0.2); border: none; color: #ffffff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;" aria-label="Close">&times;</button>
         <div style="font-size: 32px; margin-bottom: 4px;">📱</div>
@@ -197,7 +176,6 @@ function openMpesaStkModal({ checkoutId, phone, amount, isMock, onComplete }) {
         <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Powered by UpesiPay</p>
       </div>
 
-      <!-- Modal Body -->
       <div style="padding: 28px 24px;" id="stk-modal-body">
         <div id="stk-waiting-state">
           <div style="width: 56px; height: 56px; margin: 0 auto 16px auto; border: 4px solid #e2e8f0; border-top: 4px solid #008751; border-radius: 50%; animation: spin 1s linear infinite;"></div>
@@ -224,7 +202,6 @@ function openMpesaStkModal({ checkoutId, phone, amount, isMock, onComplete }) {
           ` : ''}
         </div>
 
-        <!-- Success State (hidden initially) -->
         <div id="stk-success-state" style="display: none;">
           <div style="width: 64px; height: 64px; background: #dcfce7; color: #15803d; border-radius: 50%; font-size: 32px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">✓</div>
           <h4 style="font-size: 22px; color: #15803d; margin-bottom: 8px;">Donation Confirmed!</h4>
@@ -244,7 +221,6 @@ function openMpesaStkModal({ checkoutId, phone, amount, isMock, onComplete }) {
           </div>
         </div>
 
-        <!-- Failed State (hidden initially) -->
         <div id="stk-failed-state" style="display: none;">
           <div style="width: 64px; height: 64px; background: #fee2e2; color: #b91c1c; border-radius: 50%; font-size: 32px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">✕</div>
           <h4 style="font-size: 20px; color: #b91c1c; margin-bottom: 8px;">Payment Not Completed</h4>
@@ -260,7 +236,6 @@ function openMpesaStkModal({ checkoutId, phone, amount, isMock, onComplete }) {
     </div>
   `;
 
-  // Inject keyframe animation for spinner if missing
   if (!document.getElementById('stk-spinner-style')) {
     const styleEl = document.createElement('style');
     styleEl.id = 'stk-spinner-style';
@@ -272,7 +247,6 @@ function openMpesaStkModal({ checkoutId, phone, amount, isMock, onComplete }) {
 
   document.body.appendChild(modalOverlay);
 
-  // Close button
   const closeBtn = document.getElementById('close-stk-modal-btn');
   const doneBtn = document.getElementById('stk-done-btn');
   const retryBtn = document.getElementById('stk-retry-btn');
@@ -292,7 +266,6 @@ function openMpesaStkModal({ checkoutId, phone, amount, isMock, onComplete }) {
   doneBtn && doneBtn.addEventListener('click', cleanupModal);
   retryBtn && retryBtn.addEventListener('click', cleanupModal);
 
-  // Developer Simulation Button handler
   if (simBtn) {
     simBtn.addEventListener('click', async () => {
       simBtn.disabled = true;
@@ -303,13 +276,10 @@ function openMpesaStkModal({ checkoutId, phone, amount, isMock, onComplete }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ checkout_request_id: checkoutId })
         });
-      } catch (e) {
-        console.error('Simulation error:', e);
-      }
+      } catch (e) {}
     });
   }
 
-  // Polling logic: check transaction status every 2.5 seconds
   pollInterval = setInterval(async () => {
     try {
       const statusRes = await fetch(`/api/donation/status/${encodeURIComponent(checkoutId)}`);
@@ -328,12 +298,9 @@ function openMpesaStkModal({ checkoutId, phone, amount, isMock, onComplete }) {
           document.getElementById('stk-failed-state').style.display = 'block';
         }
       }
-    } catch (e) {
-      console.warn('Status poll check failed:', e);
-    }
+    } catch (e) {}
   }, 2500);
 
-  // Countdown timer
   countdownTimer = setInterval(() => {
     secondsRemaining -= 1;
     const secEl = document.getElementById('stk-seconds-left');
@@ -354,9 +321,6 @@ function openMpesaStkModal({ checkoutId, phone, amount, isMock, onComplete }) {
   }, 1000);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FETCH LIVE TOTAL RAISED SUM (Public Endpoint)
-// ─────────────────────────────────────────────────────────────────────────────
 async function loadLiveRaisedSum() {
   const sumElement = document.getElementById('live-raised-sum');
   if (!sumElement) return;
@@ -370,7 +334,5 @@ async function loadLiveRaisedSum() {
         sumElement.innerText = `KES ${total.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       }
     }
-  } catch (err) {
-    console.warn('Could not load live raised stats:', err);
-  }
+  } catch (err) {}
 }

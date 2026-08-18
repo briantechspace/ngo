@@ -3,23 +3,20 @@ const path = require('path');
 const { Pool } = require('pg');
 require('dotenv').config();
 
-// PostgreSQL Connection Pool Setup
 const dbUrl = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/ngo_db';
 const requiresSsl = dbUrl.includes('sslmode=require') || dbUrl.includes('neon.tech') || dbUrl.includes('supabase.co') || dbUrl.includes('render.com');
 
 const pool = new Pool({
   connectionString: dbUrl,
   ssl: requiresSsl ? { rejectUnauthorized: false } : false,
-  connectionTimeoutMillis: 3000 // 3s timeout so it doesn't hang if Postgres isn't running
+  connectionTimeoutMillis: 3000
 });
 
 let isPostgresOnline = false;
 
-// Local JSON Persistence File (Fallback when PostgreSQL service is not running)
 const DATA_DIR = path.join(__dirname, 'data');
 const LOCAL_DB_FILE = path.join(DATA_DIR, 'local_db.json');
 
-// Initial seed blogs
 const INITIAL_BLOGS = [
   {
     id: 1,
@@ -54,7 +51,6 @@ const INITIAL_BLOGS = [
   }
 ];
 
-// Helper: Ensure local DB file exists
 function ensureLocalDb() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -85,7 +81,6 @@ function writeLocalDb(data) {
   fs.writeFileSync(LOCAL_DB_FILE, JSON.stringify(data, null, 2));
 }
 
-// Bootstrap PostgreSQL Schema
 async function bootstrapPostgresSchema() {
   const schemaSql = `
     CREATE TABLE IF NOT EXISTS blogs (
@@ -131,8 +126,6 @@ async function bootstrapPostgresSchema() {
   `;
 
   await pool.query(schemaSql);
-  console.log('✅ PostgreSQL Schema verified.');
-
   const checkBlogs = await pool.query('SELECT COUNT(*) FROM blogs');
   if (parseInt(checkBlogs.rows[0].count, 10) === 0) {
     for (const blog of INITIAL_BLOGS) {
@@ -141,26 +134,22 @@ async function bootstrapPostgresSchema() {
         [blog.title, blog.slug, blog.body, blog.image_url]
       );
     }
-    console.log('🌱 Seeded initial NGO blog articles into PostgreSQL.');
   }
 }
 
-// Check database connection on startup
 (async () => {
   try {
     const res = await pool.query('SELECT NOW()');
     isPostgresOnline = true;
-    console.log(`✅ PostgreSQL Connected Successfully at ${res.rows[0].now}`);
+    console.log(`✅ PostgreSQL connected: ${res.rows[0].now}`);
     await bootstrapPostgresSchema();
   } catch (err) {
     isPostgresOnline = false;
     ensureLocalDb();
-    console.log('ℹ️  PostgreSQL server is currently offline or unreachable on port 5432.');
-    console.log('🚀 Seamlessly running in Local File Persistence mode (data/local_db.json). All features fully active!');
+    console.log('ℹ️  PostgreSQL not active on port 5432 - running in local file persistence mode (data/local_db.json).');
   }
 })();
 
-// Helper to generate URL slug
 function generateSlug(title) {
   return title
     .toLowerCase()
@@ -169,9 +158,6 @@ function generateSlug(title) {
     .replace(/-+/g, '-');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// UNIFIED DATABASE INTERFACE (PostgreSQL with Automated Local Persistence Fallback)
-// ─────────────────────────────────────────────────────────────────────────────
 const db = {
   isPostgresConnected() {
     return isPostgresOnline;
@@ -181,14 +167,12 @@ const db = {
     if (isPostgresOnline) {
       try {
         await pool.end();
-        console.log('PostgreSQL pool closed.');
       } catch (e) {
-        console.error('Error closing pool:', e.message);
+        console.error(e.message);
       }
     }
   },
 
-  // --- BLOGS ---
   async getBlogs(searchQuery = '') {
     if (isPostgresOnline) {
       try {
@@ -207,7 +191,6 @@ const db = {
       }
     }
 
-    // Local Fallback
     const local = readLocalDb();
     let blogs = local.blogs || [];
     if (searchQuery && searchQuery.trim()) {
@@ -322,7 +305,6 @@ const db = {
     return local.blogs.length < initialLen;
   },
 
-  // --- SUPPORT MESSAGES ---
   async saveSupportMessage({ name, email, phone, message }) {
     if (isPostgresOnline) {
       try {
@@ -383,7 +365,6 @@ const db = {
     return local.support_messages.length < initialLen;
   },
 
-  // --- DONATIONS ---
   async saveDonation({ donor_name, donor_email, donor_phone, amount, reference, status = 'pending' }) {
     if (isPostgresOnline) {
       try {
@@ -574,7 +555,6 @@ const db = {
     return local.donations.length < initialLen;
   },
 
-  // --- SUBSCRIBERS ---
   async saveSubscriber(email) {
     const cleanEmail = email.toLowerCase().trim();
 
@@ -638,7 +618,6 @@ const db = {
     return local.subscribers.length < initialLen;
   },
 
-  // --- DASHBOARD STATS ---
   async getDashboardStats() {
     if (isPostgresOnline) {
       try {
