@@ -156,11 +156,27 @@
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 576px) {
+  .hero {
+    padding: calc(var(--header-height) + 16px) 0 44px 0;
+  }
+  .hero-content h1 {
+    font-size: 26px;
+    margin-bottom: 12px;
+  }
+  .hero-content p {
+    font-size: 14.5px;
+    margin-bottom: 20px;
+    line-height: 1.55;
+  }
+  .hero-actions {
+    gap: 10px;
+  }
   .hero-actions .btn {
     width: 100%;
   }
 }
+
 
 /* Focus Areas Section */
 .focus-areas {
