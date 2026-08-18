@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const submitBtn = loginForm.querySelector('button[type="submit"]');
       if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Authenticating...'; }
 
+      let loginSuccess = false;
+      let token = null;
+
       try {
         const res = await fetch('/api/admin/login', {
           method: 'POST',
@@ -44,17 +47,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
 
         if (res.ok && data.success) {
-          localStorage.setItem('dta_admin_token', data.token);
+          loginSuccess = true;
+          token = data.token;
+          localStorage.setItem('dta_admin_token', token);
           showNotification('Login successful! Welcome to the Admin Portal.', 'success');
-          showDashboard();
         } else {
           showNotification(data.message || 'Invalid credentials.', 'error');
         }
       } catch (err) {
-        console.error('Login error:', err);
-        showNotification('Server communication error. Please try again.', 'error');
+        console.error('Login network error:', err);
+        showNotification('Unable to reach server. Please check your connection.', 'error');
       } finally {
         if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Access Portal'; }
+      }
+
+      if (loginSuccess) {
+        showDashboard();
       }
     });
   }
@@ -108,19 +116,19 @@ function showDashboard() {
   document.getElementById('admin-login-container').style.display = 'none';
   document.getElementById('admin-dashboard-container').style.display = 'block';
 
-  // Initialize Quill editors once container is visible
-  initQuillEditors();
+  try {
+    initQuillEditors();
+  } catch (e) {
+    console.warn('Quill editor init note:', e);
+  }
 
-  // Check upload mode
-  checkUploadMode();
-
-  // Load all admin datasets
-  loadDashboardStats();
-  loadSupportMessages();
-  loadDonations();
-  loadAdminBlogs();
-  loadSubscribers();
-  loadSystemDiagnostics();
+  try { checkUploadMode(); } catch (e) {}
+  try { loadDashboardStats(); } catch (e) {}
+  try { loadSupportMessages(); } catch (e) {}
+  try { loadDonations(); } catch (e) {}
+  try { loadAdminBlogs(); } catch (e) {}
+  try { loadSubscribers(); } catch (e) {}
+  try { loadSystemDiagnostics(); } catch (e) {}
 }
 
 function getAuthHeaders() {
