@@ -235,6 +235,9 @@ async function loadBlogDetail() {
       if (contentEl) {
         contentEl.innerHTML = blog.body;
       }
+
+      // Setup 1-Click Social Sharing
+      setupSocialShareButtons(blog.title);
     } else {
       showNotification('Blog post not found.', 'error');
       setTimeout(() => window.location.href = '/blogs', 2000);
@@ -255,11 +258,55 @@ async function loadBlogDetail() {
       if (contentEl) {
         contentEl.innerHTML = localBlog.body;
       }
+
+      setupSocialShareButtons(localBlog.title);
     } else {
       if (contentEl) {
         contentEl.innerHTML = '<p style="color: var(--color-red-primary);">Failed to load article. Please check your network connection.</p>';
       }
     }
+  }
+}
+
+// 1-Click Social Share Handler
+function setupSocialShareButtons(title) {
+  const currentUrl = encodeURIComponent(window.location.href);
+  const encodedTitle = encodeURIComponent(title || document.title);
+
+  const whatsappBtn = document.getElementById('share-whatsapp-btn');
+  const twitterBtn = document.getElementById('share-twitter-btn');
+  const facebookBtn = document.getElementById('share-facebook-btn');
+  const linkedinBtn = document.getElementById('share-linkedin-btn');
+  const copyBtn = document.getElementById('share-copy-btn');
+
+  if (whatsappBtn) {
+    whatsappBtn.href = `https://api.whatsapp.com/send?text=${encodedTitle}%20${currentUrl}`;
+  }
+  if (twitterBtn) {
+    twitterBtn.href = `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${currentUrl}&hashtags=DTA,WomenEmpowerment,ClimateAction`;
+  }
+  if (facebookBtn) {
+    facebookBtn.href = `https://www.facebook.com/sharer/sharer.php?u=${currentUrl}`;
+  }
+  if (linkedinBtn) {
+    linkedinBtn.href = `https://www.linkedin.com/sharing/share-offsite/?url=${currentUrl}`;
+  }
+  if (copyBtn) {
+    copyBtn.onclick = () => {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+          showNotification('Article link copied to clipboard!', 'success');
+        });
+      } else {
+        const tempInput = document.createElement('input');
+        tempInput.value = window.location.href;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+        showNotification('Article link copied to clipboard!', 'success');
+      }
+    };
   }
 }
 

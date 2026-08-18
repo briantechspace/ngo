@@ -382,8 +382,11 @@ function renderDonations(donations) {
           </select>
         </td>
         <td style="font-size: 12px; color: var(--text-muted);">${new Date(d.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</td>
-        <td>
-          <button class="btn btn-outline btn-sm" style="color: var(--color-red-primary); border-color: var(--color-red-primary); padding: 4px 8px;" onclick="deleteDonationRecord(${d.id})">
+        <td style="white-space: nowrap;">
+          <a href="/receipt?ref=${encodeURIComponent(d.reference)}" target="_blank" class="btn btn-outline btn-sm" style="color: var(--color-blue-primary); border-color: var(--color-blue-primary); padding: 4px 8px; font-size: 12px; margin-right: 4px;">
+            📄 Receipt
+          </a>
+          <button class="btn btn-outline btn-sm" style="color: var(--color-red-primary); border-color: var(--color-red-primary); padding: 4px 8px; font-size: 12px;" onclick="deleteDonationRecord(${d.id})">
             Delete
           </button>
         </td>

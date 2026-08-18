@@ -67,6 +67,28 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // 3.5. Interactive FAQ Accordions
+  document.querySelectorAll('.faq-accordion').forEach(accordion => {
+    accordion.addEventListener('click', (e) => {
+      const questionBtn = e.target.closest('.faq-question');
+      if (!questionBtn) return;
+      const item = questionBtn.closest('.faq-item');
+      if (!item) return;
+
+      const wasActive = item.classList.contains('active');
+      
+      // Close other items in the same accordion
+      accordion.querySelectorAll('.faq-item').forEach(otherItem => {
+        otherItem.classList.remove('active');
+      });
+
+      // Toggle clicked item
+      if (!wasActive) {
+        item.classList.add('active');
+      }
+    });
+  });
 });
 
 // 4. Global Toast Notification Banner Utility

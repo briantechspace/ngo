@@ -624,12 +624,50 @@ app.post('/api/donation/simulate-confirm', async (req, res) => {
   }
 });
 
-// Legacy Paystack verification fallback
-app.post('/api/donate/verify', async (req, res) => {
-  const { reference } = req.body;
-  if (!reference) return res.status(400).json({ success: false, message: 'Reference required' });
-  const updated = await db.updateDonationStatus(reference, 'success');
-  res.json({ success: true, message: 'Donation confirmed', donation: updated });
+// 6.5 DONATIONS: Fetch Official Donor Receipt & Tax Certificate Data
+app.get('/api/donations/receipt/:reference', async (req, res) => {
+  try {
+    const { reference } = req.params;
+    let donation = await db.getDonationByReference(reference);
+
+    if (!donation) {
+      donation = await db.getDonationByCheckoutId(reference);
+    }
+
+    if (!donation) {
+      return res.status(404).json({ success: false, message: 'Donation receipt record not found.' });
+    }
+
+    const receiptNumber = `DTA-REC-${new Date(donation.created_at).getFullYear()}${(new Date(donation.created_at).getMonth() + 1).toString().padStart(2, '0')}-${donation.id.toString().padStart(4, '0')}`;
+
+    res.json({
+      success: true,
+      receipt: {
+        receiptNumber,
+        donationId: donation.id,
+        donorName: donation.donor_name || 'Valued Supporter',
+        donorEmail: donation.donor_email || '',
+        donorPhone: donation.donor_phone || '',
+        amount: parseFloat(donation.amount || 0),
+        currency: donation.currency || 'KES',
+        reference: donation.reference,
+        status: donation.status,
+        date: donation.created_at,
+        organization: {
+          name: 'Doorway to Acceptance (DTA) NGO',
+          registrationNo: 'OP.218/051/20-291/12480',
+          taxExemptNo: 'KRA-PIN-P051982341Z',
+          address: 'Nairobi, Kenya',
+          email: 'doorwaytoacceptance@yahoo.com',
+          phone: '+254 798 997 511',
+          authorizedSignatory: 'Executive Director, DTA'
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching donation receipt:', error);
+    res.status(500).json({ success: false, message: 'Server error generating receipt.' });
+  }
 });
 
 // 6.9 PUBLIC: Total raised (no auth required - for donation page display)
@@ -932,6 +970,7 @@ app.get('/blogs', (req, res) => res.sendFile(path.join(__dirname, 'public', 'blo
 app.get('/blogs/:slug', (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog-detail.html')));
 app.get('/blog/:slug', (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog-detail.html')));
 app.get('/blog-detail', (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog-detail.html')));
+app.get('/receipt', (req, res) => res.sendFile(path.join(__dirname, 'public', 'receipt.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 
 // Fallback to home page for any other unmatched frontend route

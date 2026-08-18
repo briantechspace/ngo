@@ -791,3 +791,162 @@ footer {
 .search-btn:hover {
   background-color: var(--color-blue-dark);
 }
+
+/* ==========================================================================
+   1-Click Social Sharing Bar
+   ========================================================================== */
+.social-share-wrap {
+  margin: 24px 0;
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.social-share-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.social-share-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.social-share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff !important;
+  text-decoration: none !important;
+  transition: var(--transition-smooth);
+  border: none;
+  cursor: pointer;
+}
+
+.social-share-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+  box-shadow: var(--shadow-sm);
+}
+
+.social-share-btn.whatsapp { background-color: #25D366; }
+.social-share-btn.twitter { background-color: #0f1419; }
+.social-share-btn.facebook { background-color: #1877F2; }
+.social-share-btn.linkedin { background-color: #0A66C2; }
+.social-share-btn.copy { background-color: #475569; }
+
+/* ==========================================================================
+   Interactive FAQ Accordion Section
+   ========================================================================== */
+.faq-section {
+  padding: 80px 0;
+  background: linear-gradient(180deg, var(--bg-primary) 0%, rgba(241, 245, 249, 0.6) 100%);
+}
+
+.faq-container {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.faq-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 36px;
+}
+
+.faq-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: var(--transition-smooth);
+}
+
+.faq-item:hover {
+  border-color: rgba(0, 135, 81, 0.3);
+  box-shadow: var(--shadow-sm);
+}
+
+.faq-item.active {
+  border-color: var(--color-green-primary);
+  background: #ffffff;
+  box-shadow: var(--shadow-md);
+}
+
+.faq-question {
+  width: 100%;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-dark);
+  transition: var(--transition-smooth);
+}
+
+.faq-question:hover {
+  color: var(--color-green-primary);
+}
+
+.faq-item.active .faq-question {
+  color: var(--color-green-primary);
+}
+
+.faq-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--text-muted);
+  transition: transform 0.3s ease, background-color 0.3s ease;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.faq-item.active .faq-icon {
+  transform: rotate(45deg);
+  background: var(--color-green-light);
+  color: var(--color-green-primary);
+}
+
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s ease;
+  padding: 0 24px;
+  color: var(--text-muted);
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+.faq-item.active .faq-answer {
+  max-height: 280px;
+  padding: 0 24px 20px 24px;
+}

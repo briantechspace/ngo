@@ -234,9 +234,14 @@ function openMpesaStkModal({ checkoutId, phone, amount, isMock, onComplete }) {
           <p style="font-size: 13px; color: #475569; margin-bottom: 20px;">
             Your support directly fuels grassroots girls empowerment and climate resilience in Kenya.
           </p>
-          <button id="stk-done-btn" style="background: #008751; color: white; border: none; padding: 12px 24px; border-radius: 9999px; font-weight: 600; cursor: pointer; font-size: 14px; width: 100%;">
-            Done
-          </button>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <a href="/receipt?ref=${encodeURIComponent(checkoutId)}" target="_blank" style="background: #008751; color: white; text-decoration: none; padding: 12px 20px; border-radius: 9999px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+              📄 Download Official Receipt
+            </a>
+            <button id="stk-done-btn" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 10px 24px; border-radius: 9999px; font-weight: 600; cursor: pointer; font-size: 14px; width: 100%;">
+              Done
+            </button>
+          </div>
         </div>
 
         <!-- Failed State (hidden initially) -->
