@@ -185,6 +185,25 @@ const db = {
     return res.rows[0];
   },
 
+  async getBlogById(id) {
+    const res = await pool.query('SELECT * FROM blogs WHERE id = $1', [parseInt(id, 10)]);
+    return res.rows[0] || null;
+  },
+
+  async updateBlog(id, { title, body, imageUrl }) {
+    const slug = generateSlug(title);
+    let query = 'UPDATE blogs SET title = $1, body = $2 WHERE id = $3 RETURNING *';
+    let params = [title, body, parseInt(id, 10)];
+
+    if (imageUrl) {
+      query = 'UPDATE blogs SET title = $1, body = $2, image_url = $3 WHERE id = $4 RETURNING *';
+      params = [title, body, imageUrl, parseInt(id, 10)];
+    }
+
+    const res = await pool.query(query, params);
+    return res.rows[0] || null;
+  },
+
   async deleteBlog(id) {
     const res = await pool.query('DELETE FROM blogs WHERE id = $1 RETURNING *', [parseInt(id, 10)]);
     return res.rowCount > 0;
@@ -252,6 +271,14 @@ const db = {
     const res = await pool.query(
       'UPDATE donations SET status = $1 WHERE reference = $2 OR reference LIKE $3 RETURNING *',
       [status, reference, `%${reference}%`]
+    );
+    return res.rows[0] || null;
+  },
+
+  async updateDonationStatusById(id, status) {
+    const res = await pool.query(
+      'UPDATE donations SET status = $1 WHERE id = $2 RETURNING *',
+      [status, parseInt(id, 10)]
     );
     return res.rows[0] || null;
   },

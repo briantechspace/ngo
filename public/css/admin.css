@@ -226,19 +226,31 @@
   text-transform: capitalize;
 }
 
-.status-badge.success {
-  background-color: var(--color-green-light);
-  color: var(--color-green-primary);
+.status-badge.success,
+.status-success {
+  background-color: var(--color-green-light) !important;
+  color: var(--color-green-primary) !important;
+  border-color: rgba(71, 182, 57, 0.3) !important;
 }
 
-.status-badge.pending {
-  background-color: #fef3c7;
-  color: #d97706;
+.status-badge.pending,
+.status-pending {
+  background-color: #fef3c7 !important;
+  color: #d97706 !important;
+  border-color: rgba(217, 119, 6, 0.3) !important;
 }
 
-.status-badge.failed {
-  background-color: var(--color-red-light);
-  color: var(--color-red-primary);
+.status-badge.failed,
+.status-failed {
+  background-color: var(--color-red-light) !important;
+  color: var(--color-red-primary) !important;
+  border-color: rgba(225, 29, 72, 0.3) !important;
+}
+
+.status-refunded {
+  background-color: #f1f5f9 !important;
+  color: #64748b !important;
+  border-color: #cbd5e1 !important;
 }
 
 /* Add Blog Form Specifics */

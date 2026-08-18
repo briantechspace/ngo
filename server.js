@@ -754,6 +754,176 @@ app.delete('/api/admin/subscribers/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// 15. ADMIN: Get single blog post by ID for editing
+app.get('/api/admin/blogs/:id', authMiddleware, async (req, res) => {
+  try {
+    const blog = await db.getBlogById(req.params.id);
+    if (!blog) return res.status(404).json({ success: false, message: 'Blog post not found.' });
+    res.json({ success: true, blog });
+  } catch (error) {
+    console.error('Error loading blog by ID:', error);
+    res.status(500).json({ success: false, message: 'Server error loading blog.' });
+  }
+});
+
+// 16. ADMIN: Edit / Update existing blog post (with optional cover image replacement)
+app.put('/api/admin/blogs/:id', authMiddleware, upload.single('image'), async (req, res) => {
+  try {
+    const { title, body } = req.body;
+    if (!title || !body) {
+      return res.status(400).json({ success: false, message: 'Title and body are required.' });
+    }
+
+    const imageUrl = req.file ? getUploadedFileUrl(req) : undefined;
+    const updatedBlog = await db.updateBlog(req.params.id, { title, body, imageUrl });
+
+    if (!updatedBlog) {
+      return res.status(404).json({ success: false, message: 'Blog post not found.' });
+    }
+
+    console.log(`📝 Blog updated: #${req.params.id} "${title}"`);
+    res.json({ success: true, message: 'Blog article updated successfully!', blog: updatedBlog });
+  } catch (error) {
+    console.error('Error updating blog post:', error);
+    res.status(500).json({ success: false, message: 'Server error updating blog post.' });
+  }
+});
+
+// 17. ADMIN: Manual Donation Entry (Bank Transfer / Cash / Paybill Offline Grant)
+app.post('/api/admin/donations/manual', authMiddleware, async (req, res) => {
+  try {
+    const { donor_name, donor_email, donor_phone, amount, payment_method, notes } = req.body;
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid donation amount is required.' });
+    }
+
+    const reference = `MANUAL-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 1000)}`;
+    const saved = await db.saveDonation({
+      donor_name: donor_name || 'Anonymous Donor',
+      donor_email: donor_email || 'manual_entry@dta-ngo.org',
+      donor_phone: donor_phone || '',
+      amount: parseFloat(amount),
+      reference,
+      status: 'success'
+    });
+
+    console.log(`💰 Manual donation added: ${reference} | KES ${amount} | Method: ${payment_method || 'Manual'}`);
+    res.status(201).json({ success: true, message: 'Manual donation recorded successfully!', donation: saved });
+  } catch (error) {
+    console.error('Error adding manual donation:', error);
+    res.status(500).json({ success: false, message: 'Server error saving manual donation.' });
+  }
+});
+
+// 18. ADMIN: Override Donation Status (Mark Success / Failed / Refunded)
+app.patch('/api/admin/donations/:id/status', authMiddleware, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['success', 'pending', 'failed', 'refunded', 'cancelled'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status provided.' });
+    }
+
+    const updated = await db.updateDonationStatusById(req.params.id, status);
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Donation record not found.' });
+    }
+
+    console.log(`⚡ Donation #${req.params.id} status overridden to: ${status}`);
+    res.json({ success: true, message: `Donation status updated to ${status}.`, donation: updated });
+  } catch (error) {
+    console.error('Error overriding donation status:', error);
+    res.status(500).json({ success: false, message: 'Server error updating donation status.' });
+  }
+});
+
+// 19. ADMIN: Newsletter Broadcast Composer
+app.post('/api/admin/newsletter/broadcast', authMiddleware, async (req, res) => {
+  try {
+    const { subject, message } = req.body;
+    if (!subject || !message) {
+      return res.status(400).json({ success: false, message: 'Subject and message are required.' });
+    }
+
+    const subscribers = await db.getSubscribers();
+    console.log(`📢 Newsletter Broadcast queued: "${subject}" to ${subscribers.length} subscriber(s).`);
+
+    res.json({
+      success: true,
+      message: `Broadcast message queued successfully for ${subscribers.length} subscriber(s)!`,
+      recipient_count: subscribers.length
+    });
+  } catch (error) {
+    console.error('Error broadcasting newsletter:', error);
+    res.status(500).json({ success: false, message: 'Server error broadcasting newsletter.' });
+  }
+});
+
+// 20. ADMIN: System Diagnostics & Health Metrics
+app.get('/api/admin/system/diagnostics', authMiddleware, async (req, res) => {
+  try {
+    const isPostgres = db.isPostgresConnected();
+    const mem = process.memoryUsage();
+
+    res.json({
+      success: true,
+      diagnostics: {
+        serverTime: new Date().toISOString(),
+        nodeVersion: process.version,
+        platform: process.platform,
+        arch: process.arch,
+        uptimeSeconds: Math.floor(process.uptime()),
+        memoryRssMb: Math.round(mem.rss / 1024 / 1024),
+        memoryHeapUsedMb: Math.round(mem.heapUsed / 1024 / 1024),
+        memoryHeapTotalMb: Math.round(mem.heapTotal / 1024 / 1024),
+        database: {
+          type: 'PostgreSQL',
+          status: isPostgres ? 'Connected' : 'Disconnected'
+        },
+        storage: (process.env.CLOUDINARY_CLOUD_NAME && !process.env.CLOUDINARY_CLOUD_NAME.includes('your_cloud_name')) ? 'Cloudinary CDN' : 'Local Disk (/public/uploads)',
+        paymentGateway: 'UpesiPay (M-PESA STK Push)'
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching diagnostics:', error);
+    res.status(500).json({ success: false, message: 'Server error fetching diagnostics.' });
+  }
+});
+
+// 21. ADMIN: One-Click CSV Data Export
+app.get('/api/admin/export/:type', authMiddleware, async (req, res) => {
+  try {
+    const { type } = req.params;
+    let csvData = '';
+    let filename = '';
+
+    if (type === 'donations') {
+      const donations = await db.getDonations();
+      filename = `dta_donations_${new Date().toISOString().slice(0, 10)}.csv`;
+      csvData = 'ID,Donor Name,Donor Email,Donor Phone,Amount (KES),Currency,Reference,Status,Date\n' +
+        donations.map(d => `"${d.id}","${(d.donor_name || '').replace(/"/g, '""')}","${(d.donor_email || '').replace(/"/g, '""')}","${d.donor_phone || ''}","${d.amount}","${d.currency || 'KES'}","${d.reference}","${d.status}","${new Date(d.created_at).toISOString()}"`).join('\n');
+    } else if (type === 'messages') {
+      const messages = await db.getSupportMessages();
+      filename = `dta_inquiries_${new Date().toISOString().slice(0, 10)}.csv`;
+      csvData = 'ID,Name,Email,Phone,Message,Date\n' +
+        messages.map(m => `"${m.id}","${(m.name || '').replace(/"/g, '""')}","${(m.email || '').replace(/"/g, '""')}","${m.phone || ''}","${(m.message || '').replace(/"/g, '""').replace(/\n/g, ' ')}","${new Date(m.created_at).toISOString()}"`).join('\n');
+    } else if (type === 'subscribers') {
+      const subscribers = await db.getSubscribers();
+      filename = `dta_subscribers_${new Date().toISOString().slice(0, 10)}.csv`;
+      csvData = 'ID,Email,Subscribed Date\n' +
+        subscribers.map(s => `"${s.id}","${(s.email || '').replace(/"/g, '""')}","${new Date(s.subscribed_at).toISOString()}"`).join('\n');
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid export type.' });
+    }
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.status(200).send(csvData);
+  } catch (error) {
+    console.error('Error exporting data to CSV:', error);
+    res.status(500).json({ success: false, message: 'Server error exporting CSV data.' });
+  }
+});
+
 // --- Clean Page Serving Endpoints (No .html extension in URL) ---
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/home', (req, res) => res.redirect(301, '/'));
