@@ -143,27 +143,29 @@ app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), st
 function verifyPassword(inputPassword, storedHashOrPlain) {
   if (!inputPassword || !storedHashOrPlain) return false;
 
+  const rawInput = inputPassword.toString().trim();
+  let rawStored = storedHashOrPlain.toString().trim();
+
+  // Strip wrapping quotes if present in .env
+  if ((rawStored.startsWith('"') && rawStored.endsWith('"')) || (rawStored.startsWith("'") && rawStored.endsWith("'"))) {
+    rawStored = rawStored.slice(1, -1).trim();
+  }
+
+  // Direct match for plain text credentials in .env
+  if (rawInput === rawStored) return true;
+
   // Format: pbkdf2:salt:hash
-  if (storedHashOrPlain.startsWith('pbkdf2:')) {
-    const parts = storedHashOrPlain.split(':');
+  if (rawStored.startsWith('pbkdf2:')) {
+    const parts = rawStored.split(':');
     if (parts.length === 3) {
       const salt = parts[1];
       const key = parts[2];
-      const derived = crypto.pbkdf2Sync(inputPassword, salt, 100000, 64, 'sha512').toString('hex');
-      const a = Buffer.from(derived, 'utf8');
-      const b = Buffer.from(key, 'utf8');
-      return a.length === b.length && crypto.timingSafeEqual(a, b);
+      const derived = crypto.pbkdf2Sync(rawInput, salt, 100000, 64, 'sha512').toString('hex');
+      return derived === key;
     }
   }
 
-  // Constant-time string comparison for plain text env credentials
-  const a = Buffer.from(inputPassword, 'utf8');
-  const b = Buffer.from(storedHashOrPlain, 'utf8');
-  if (a.length !== b.length) {
-    crypto.timingSafeEqual(a, a);
-    return false;
-  }
-  return crypto.timingSafeEqual(a, b);
+  return false;
 }
 
 // --- Auth Session Token Verification Helpers (Built-in Crypto) ---
@@ -331,16 +333,25 @@ app.get('/api/health', (req, res) => {
 
 // Admin Login Endpoint (Protected by rate limiting & timing-safe password check)
 app.post('/api/admin/login', authLimiter, (req, res) => {
-  const { username, password } = req.body;
-  const correctUser = process.env.ADMIN_USERNAME || 'admin';
+  let { username, password } = req.body;
+  username = (username || '').toString().trim();
+  password = (password || '').toString().trim();
+
+  let correctUser = (process.env.ADMIN_USERNAME || 'admin').toString().trim();
+  if ((correctUser.startsWith('"') && correctUser.endsWith('"')) || (correctUser.startsWith("'") && correctUser.endsWith("'"))) {
+    correctUser = correctUser.slice(1, -1).trim();
+  }
+
   const correctPass = process.env.ADMIN_PASSWORD || 'eco_admin_2026';
 
-  if (username === correctUser && verifyPassword(password, correctPass)) {
+  if (username.toLowerCase() === correctUser.toLowerCase() && verifyPassword(password, correctPass)) {
     const token = generateToken();
-    res.json({ success: true, token });
-  } else {
-    res.status(401).json({ success: false, message: 'Invalid username or password.' });
+    console.log(`🔑 Admin authenticated successfully as: ${username}`);
+    return res.json({ success: true, token });
   }
+
+  console.log(`⚠️ Invalid admin login attempt with username: "${username}"`);
+  return res.status(401).json({ success: false, message: 'Invalid username or password.' });
 });
 
 // 1. PUBLIC: Fetch Payment Gateway Config (UpesiPay M-PESA)
