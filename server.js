@@ -912,10 +912,9 @@ app.get('/api/admin/system/diagnostics', authMiddleware, async (req, res) => {
         uptimeSeconds: Math.floor(process.uptime()),
         memoryRssMb: Math.round(mem.rss / 1024 / 1024),
         memoryHeapUsedMb: Math.round(mem.heapUsed / 1024 / 1024),
-        memoryHeapTotalMb: Math.round(mem.heapTotal / 1024 / 1024),
         database: {
-          type: 'PostgreSQL',
-          status: isPostgres ? 'Connected' : 'Disconnected'
+          type: isPostgres ? 'PostgreSQL' : 'Local File Persistence (data/local_db.json)',
+          status: isPostgres ? 'Connected (PostgreSQL Active)' : 'Active (Zero-Crash Fallback)'
         },
         storage: (process.env.CLOUDINARY_CLOUD_NAME && !process.env.CLOUDINARY_CLOUD_NAME.includes('your_cloud_name')) ? 'Cloudinary CDN' : 'Local Disk (/public/uploads)',
         paymentGateway: 'UpesiPay (M-PESA STK Push)'

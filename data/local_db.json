@@ -1,0 +1,31 @@
+{
+  "blogs": [
+    {
+      "id": 1,
+      "title": "Preventing SGBV: Educating and Empowering the Next Generation of Girls",
+      "slug": "preventing-sgbv-educating-empowering-next-generation",
+      "body": "<p>At Doorway to Acceptance (DTA), we believe that education is the first line of defense against Sexual and Gender-Based Violence (SGBV). Education extends far beyond the classroom; it builds the foundation for confidence and leadership.</p>\n           <p>Our Life Skills and Mentorship programmes in local schools and communities teach girls about their rights, building self-esteem and resistance to exploitation. By addressing the root causes of vulnerability—such as poverty and gender inequality—early on, we construct safer societies.</p>\n           <blockquote>\"When you educate a girl, you give her the keys to unlock her own safety, dignity, and independence.\" - SYLVIA WAMBUI, Founder & Director</blockquote>\n           <p>Join us in expanding this initiative to schools across rural Kenya!</p>",
+      "image_url": "/images/blog_sgbv.jpg",
+      "created_at": "2026-08-18T06:59:34.044Z"
+    },
+    {
+      "id": 2,
+      "title": "Climate-Smart Livelihoods: Establishing Women-Led Green Enterprises",
+      "slug": "climate-smart-livelihoods-women-led-green-enterprises",
+      "body": "<p>Climate change impacts women first and most severely through food insecurity, water scarcity, and loss of traditional livelihoods. DTA works to bridge this gap by establishing climate-smart enterprises.</p>\n           <p>Through our Green Futures Programme, women are launching sustainable beekeeping, regenerative agriculture, and aquaculture projects. These initiatives protect local biodiversity while generating stable, independent income streams that keep families secure.</p>\n           <p>By connecting economic empowerment with environmental conservation, we help communities adapt to climate change while lifting women out of dependency.</p>",
+      "image_url": "/images/blog_climate.jpg",
+      "created_at": "2026-08-17T06:59:34.045Z"
+    },
+    {
+      "id": 3,
+      "title": "Walking with Survivors: The Journey to Long-Term Healing and Reintegration",
+      "slug": "walking-with-survivors-journey-long-term-healing",
+      "body": "<p>While violence prevention remains at the heart of our mission, supporting survivors on their recovery journey is equally crucial. DTA takes a survivor-centered, trauma-informed approach to reintegration.</p>\n           <p>In partnership with healthcare providers and legal counselors, we connect survivors to medical care, emergency safeguarding, and psychosocial counseling. Furthermore, our peer support networks and skills development programs empower survivors to reclaim their independence and rebuild their lives with dignity.</p>\n           <p>Healing is a journey—not a single event—and DTA walks alongside every woman and girl on that path.</p>",
+      "image_url": "/images/blog_survivors.jpg",
+      "created_at": "2026-08-16T06:59:34.045Z"
+    }
+  ],
+  "support_messages": [],
+  "donations": [],
+  "subscribers": []
+}
