@@ -296,13 +296,13 @@ app.get('/api/health', (req, res) => {
   const mem = process.memoryUsage();
 
   res.json({
-    status: 'ok',
+    status: isPostgres ? 'ok' : 'degraded',
     uptime: `${uptimeSeconds}s`,
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     database: {
-      mode: isPostgres ? 'postgresql' : (process.env.USE_MOCK_DB === 'true' ? 'mock' : 'in-memory-fallback'),
-      connected: isPostgres || process.env.USE_MOCK_DB === 'true' || !process.env.DATABASE_URL
+      type: 'postgresql',
+      connected: isPostgres
     },
     storage: (process.env.CLOUDINARY_CLOUD_NAME && !process.env.CLOUDINARY_CLOUD_NAME.includes('your_cloud_name')) ? 'cloudinary' : 'local',
     memory: {
