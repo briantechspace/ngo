@@ -196,10 +196,18 @@ async function loadBlogs(searchQuery = '') {
 // 3. BLOG DETAIL: Load single blog content
 async function loadBlogDetail() {
   const urlParams = new URLSearchParams(window.location.search);
-  const slug = urlParams.get('slug');
+  let slug = urlParams.get('slug');
+
+  // Also support clean pathname format: /blogs/:slug or /blog/:slug
+  if (!slug) {
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    if (pathParts.length >= 2 && (pathParts[0] === 'blogs' || pathParts[0] === 'blog')) {
+      slug = pathParts[1];
+    }
+  }
 
   if (!slug) {
-    window.location.href = '/blogs.html';
+    window.location.href = '/blogs';
     return;
   }
 
@@ -209,7 +217,7 @@ async function loadBlogDetail() {
   const contentEl = document.getElementById('blog-detail-content-area');
 
   try {
-    const res = await fetch(`/api/blogs/${slug}`);
+    const res = await fetch(`/api/blogs/${encodeURIComponent(slug)}`);
     const data = await res.json();
 
     if (data.success && data.blog) {
@@ -229,7 +237,7 @@ async function loadBlogDetail() {
       }
     } else {
       showNotification('Blog post not found.', 'error');
-      setTimeout(() => window.location.href = '/blogs.html', 2000);
+      setTimeout(() => window.location.href = '/blogs', 2000);
     }
   } catch (error) {
     console.warn('⚠️ Fetching blog details failed. Loading local static content matching slug.', error);
@@ -267,7 +275,7 @@ function createBlogCard(blog) {
       <div class="blog-card-date">${formatDate(blog.created_at)}</div>
       <h3 class="blog-card-title">${escapeHTML(blog.title)}</h3>
       <p class="blog-card-excerpt">${escapeHTML(truncateText(blog.body, 125))}</p>
-      <a href="/blog-detail.html?slug=${blog.slug}" class="blog-card-link">
+      <a href="/blogs/${blog.slug}" class="blog-card-link">
         Read Full Story
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
       </a>

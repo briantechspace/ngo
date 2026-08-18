@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const query = searchInput.value.trim();
       if (query) {
-        window.location.href = `/blogs.html?search=${encodeURIComponent(query)}`;
+        window.location.href = `/blogs?search=${encodeURIComponent(query)}`;
       }
     });
   }

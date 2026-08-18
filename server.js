@@ -117,8 +117,25 @@ const staticOptions = process.env.NODE_ENV === 'production'
   ? { maxAge: '1d', etag: true }
   : {};
 
-// Serve static frontend assets
-app.use(express.static(path.join(__dirname, 'public'), staticOptions));
+// Clean URL redirect middleware: 301 redirects /path.html to /path
+app.use((req, res, next) => {
+  if (req.path.endsWith('.html')) {
+    if (req.path === '/index.html') {
+      const search = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+      return res.redirect(301, '/' + search);
+    }
+    const cleanPath = req.path.slice(0, -5);
+    const search = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    return res.redirect(301, cleanPath + search);
+  }
+  next();
+});
+
+// Serve static frontend assets (css, js, images, uploads)
+app.use(express.static(path.join(__dirname, 'public'), {
+  extensions: ['html'],
+  ...staticOptions
+}));
 // Support serving uploaded images locally if Cloudinary is not used
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), staticOptions));
 
@@ -737,7 +754,17 @@ app.delete('/api/admin/subscribers/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Fallback to home page for any other route (single page routing support or static files)
+// --- Clean Page Serving Endpoints (No .html extension in URL) ---
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/home', (req, res) => res.redirect(301, '/'));
+app.get('/about', (req, res) => res.sendFile(path.join(__dirname, 'public', 'about.html')));
+app.get('/blogs', (req, res) => res.sendFile(path.join(__dirname, 'public', 'blogs.html')));
+app.get('/blogs/:slug', (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog-detail.html')));
+app.get('/blog/:slug', (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog-detail.html')));
+app.get('/blog-detail', (req, res) => res.sendFile(path.join(__dirname, 'public', 'blog-detail.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+
+// Fallback to home page for any other unmatched frontend route
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
