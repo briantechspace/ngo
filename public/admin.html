@@ -45,8 +45,9 @@
 
   <!-- Admin Login Container -->
   <div id="admin-login-container" style="display: flex; align-items: center; justify-content: center; min-height: calc(100vh - var(--header-height)); padding: 40px 20px; background: linear-gradient(135deg, rgba(255, 241, 242, 0.4) 0%, rgba(231, 241, 255, 0.3) 100%);">
-    <div class="glass-card" style="width: 100%; max-width: 400px; padding: 32px 24px; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); text-align: center;">
+    <div class="glass-card" style="width: 100%; max-width: 400px; padding: 36px 28px; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); text-align: center;">
       <div style="width: 56px; height: 56px; border-radius: 50%; background-color: var(--color-blue-light); color: var(--color-blue-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; font-size: 24px;">🔑</div>
+      <span class="section-kicker blue" style="margin-bottom: 8px;">Portal Access</span>
       <h2 style="font-size: 22px; margin-bottom: 8px;">DTA Admin Login</h2>
       <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Authenticate to access the DTA administrative dashboard.</p>
       
@@ -71,7 +72,8 @@
       <!-- Top header -->
       <div class="admin-header">
         <div>
-          <h1>DTA Control Panel</h1>
+          <span class="section-kicker blue">Administrative Portal</span>
+          <h1 style="margin-top: 6px;">DTA Control Panel</h1>
           <p class="text-muted">Manage blog publications, inspect support submissions, and verify donation logs.</p>
         </div>
         <button id="admin-logout-btn" class="btn btn-outline btn-sm">Log Out</button>
@@ -221,7 +223,7 @@
 
       <!-- Tab 3 Panel: Manage Blogs (Write form + Management List) -->
       <div id="tab-manage-blogs" class="tab-content">
-        <div style="display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 24px; align-items: start;" class="manage-blogs-grid">
+        <div style="display: grid; grid-template-columns: 1.35fr 0.65fr; gap: 28px; align-items: start;" class="manage-blogs-grid">
 
           <!-- Left side: Blog Editor -->
           <div class="blog-editor-card">
