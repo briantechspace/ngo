@@ -351,6 +351,30 @@ const db = {
     }
   },
 
+  async getDonationByReference(reference) {
+    if (pool && isDbReady) {
+      try {
+        const res = await pool.query('SELECT * FROM donations WHERE reference = $1', [reference]);
+        return res.rows[0] || null;
+      } catch (err) {
+        console.warn('⚠️ getDonationByReference fallback to mock:', err.message);
+      }
+    }
+    return mockDb.donations.find(d => d.reference === reference) || null;
+  },
+
+  async getDonationByCheckoutId(checkoutRequestId) {
+    if (pool && isDbReady) {
+      try {
+        const res = await pool.query('SELECT * FROM donations WHERE reference = $1 OR reference LIKE $2', [checkoutRequestId, `%${checkoutRequestId}%`]);
+        return res.rows[0] || null;
+      } catch (err) {
+        console.warn('⚠️ getDonationByCheckoutId fallback to mock:', err.message);
+      }
+    }
+    return mockDb.donations.find(d => d.reference === checkoutRequestId || (d.checkout_request_id && d.checkout_request_id === checkoutRequestId)) || null;
+  },
+
   async updateDonationStatus(reference, status) {
     if (pool && isDbReady) {
       try {
@@ -363,7 +387,7 @@ const db = {
         console.warn('⚠️ updateDonationStatus fallback to mock:', err.message);
       }
     }
-    const donation = mockDb.donations.find(d => d.reference === reference);
+    const donation = mockDb.donations.find(d => d.reference === reference || (d.checkout_request_id && d.checkout_request_id === reference));
     if (donation) {
       donation.status = status;
       return donation;

@@ -107,11 +107,7 @@ const generalApiLimiter = createRateLimiter(10 * 60 * 1000, 300, 'Too many reque
 // Apply general limiter to all /api/ endpoints
 app.use('/api', generalApiLimiter);
 
-// Raw body capture for Paystack webhook HMAC verification
-// Must be registered BEFORE bodyParser.json()
-app.use('/api/donate/webhook', bodyParser.raw({ type: 'application/json' }));
-
-// Middleware for all other routes
+// Middleware for all routes
 app.use(cors());
 app.use(bodyParser.json({ limit: '2mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '2mb' }));
@@ -194,32 +190,74 @@ function authMiddleware(req, res, next) {
   }
 }
 
-// --- Paystack Verification Helper ---
-function verifyPaystackPayment(reference) {
+// --- Phone Number Formatter for Kenyan M-PESA ---
+function normalizeKenyanPhone(phone) {
+  if (!phone) return null;
+  let cleaned = phone.toString().replace(/[\s\-\(\)\+]/g, '');
+
+  // 07XXXXXXXX -> 2547XXXXXXXX or 01XXXXXXXX -> 2541XXXXXXXX
+  if (/^0[17]\d{8}$/.test(cleaned)) {
+    return '254' + cleaned.slice(1);
+  }
+  // 7XXXXXXXX or 1XXXXXXXX -> 2547XXXXXXXX / 2541XXXXXXXX
+  if (/^[17]\d{8}$/.test(cleaned)) {
+    return '254' + cleaned;
+  }
+  // 2547XXXXXXXX or 2541XXXXXXXX (12 digits)
+  if (/^254[17]\d{8}$/.test(cleaned)) {
+    return cleaned;
+  }
+  if (cleaned.startsWith('254') && cleaned.length === 12) {
+    return cleaned;
+  }
+  return null;
+}
+
+// --- UpesiPay M-PESA STK Push Helper ---
+function initiateUpesiPayCollection({ channel_id, phone_number, amount, callback_url }) {
   return new Promise((resolve, reject) => {
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
-    if (!secretKey || secretKey.includes('your_secret_key')) {
-      console.log(`ℹ️ [Paystack Mock] Verifying reference: ${reference}`);
+    const authToken = process.env.UPESIPAY_AUTH_TOKEN;
+
+    // Simulation / Local Offline Mode when no live auth token is provided
+    if (!authToken || authToken.includes('your_basic_auth_token') || authToken === 'mock') {
+      console.log(`ℹ️ [UpesiPay Mock] Simulating STK Push to ${phone_number} for KES ${amount}`);
+      const mockCheckoutId = 'ws_CO_' + Date.now() + Math.floor(Math.random() * 100000);
+      const mockMerchantId = 'dta-' + Date.now().toString(36);
       return resolve({
-        status: true,
+        success: true,
+        status_code: 200,
+        message: 'STK push sent successfully. Enter your M-PESA PIN on your phone.',
         data: {
-          status: 'success',
-          reference: reference,
-          amount: 0,
-          currency: 'KES',
-          customer: { email: 'mock_donor@example.com' },
-          _mock: true
-        }
+          checkout_request_id: mockCheckoutId,
+          merchant_request_id: mockMerchantId,
+          phone_number: phone_number,
+          amount: Number(amount),
+          status: 'sent'
+        },
+        _mock: true
       });
     }
 
+    const postData = JSON.stringify({
+      channel_id: parseInt(channel_id, 10),
+      phone_number: phone_number.toString(),
+      amount: Number(amount),
+      ...(callback_url ? { callback_url } : {})
+    });
+
+    const authHeader = (authToken.startsWith('Basic ') || authToken.startsWith('Bearer ') || authToken.startsWith('Token '))
+      ? authToken
+      : `Basic ${authToken}`;
+
     const options = {
-      hostname: 'api.paystack.co',
+      hostname: 'upesipay.com',
       port: 443,
-      path: `/transaction/verify/${encodeURIComponent(reference)}`,
-      method: 'GET',
+      path: '/api/v2/collections/initiate/',
+      method: 'POST',
       headers: {
-        Authorization: `Bearer ${secretKey}`
+        'Authorization': authHeader,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
       }
     };
 
@@ -228,15 +266,23 @@ function verifyPaystackPayment(reference) {
       res.on('data', chunk => { data += chunk; });
       res.on('end', () => {
         try {
-          const responseData = JSON.parse(data);
-          resolve(responseData);
+          const parsed = JSON.parse(data);
+          resolve(parsed);
         } catch (e) {
-          reject(e);
+          resolve({
+            success: false,
+            status_code: res.statusCode,
+            message: data || 'Invalid response from UpesiPay.'
+          });
         }
       });
     });
 
-    req.on('error', error => { reject(error); });
+    req.on('error', error => {
+      reject(error);
+    });
+
+    req.write(postData);
     req.end();
   });
 }
@@ -280,13 +326,21 @@ app.post('/api/admin/login', authLimiter, (req, res) => {
   }
 });
 
-// 1. PUBLIC: Fetch Paystack Public Key
+// 1. PUBLIC: Fetch Payment Gateway Config (UpesiPay M-PESA)
+app.get('/api/config/payment', (req, res) => {
+  const channelId = process.env.UPESIPAY_CHANNEL_ID;
+  const isConfigured = !!(channelId && !channelId.includes('your_channel_id') && process.env.UPESIPAY_AUTH_TOKEN && !process.env.UPESIPAY_AUTH_TOKEN.includes('your_basic_auth_token'));
+  res.json({
+    provider: 'upesipay',
+    channel_id: channelId || 'demo',
+    is_live: isConfigured,
+    mode: isConfigured ? 'live' : 'simulation'
+  });
+});
+
+// Legacy Paystack config alias for backward compatibility
 app.get('/api/config/paystack', (req, res) => {
-  const publicKey = process.env.PAYSTACK_PUBLIC_KEY;
-  if (!publicKey || publicKey.includes('your_public_key')) {
-    return res.json({ publicKey: 'pk_test_developer_mock_key' });
-  }
-  res.json({ publicKey });
+  res.json({ publicKey: 'upesipay_mpesa_mode' });
 });
 
 // 1.5 PUBLIC: Check upload mode (Cloudinary vs local)
@@ -389,144 +443,176 @@ app.post('/api/newsletter/subscribe', submitLimiter, async (req, res) => {
 });
 
 
-// 6. PAYMENTS: Verify Paystack Transaction Reference & Log Donation
-app.post('/api/donate/verify', async (req, res) => {
+// 6. PAYMENTS: Initiate UpesiPay M-PESA STK Push
+app.post('/api/donation/initiate', submitLimiter, async (req, res) => {
   try {
-    const { reference, donor_name, donor_email, donor_phone, amount } = req.body;
+    const { donor_name, donor_email, donor_phone, amount, isAnonymous } = req.body;
 
-    if (!reference || !amount) {
-      return res.status(400).json({ success: false, message: 'Reference and amount are required.' });
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) < 1) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid donation amount (minimum KES 1).' });
     }
 
-    // Call Paystack API to verify transaction
-    const verification = await verifyPaystackPayment(reference);
+    if (!donor_phone) {
+      return res.status(400).json({ success: false, message: 'Please provide your M-PESA phone number to receive the STK prompt.' });
+    }
 
-    if (verification.status && verification.data.status === 'success') {
-      // For live transactions: Paystack returns amount in kobo → divide by 100
-      // For mock/simulation: use the amount passed from the frontend directly
-      const verifiedAmount = verification.data._mock
-        ? parseFloat(amount)
-        : verification.data.amount / 100;
+    const normalizedPhone = normalizeKenyanPhone(donor_phone);
+    if (!normalizedPhone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Kenyan phone number. Please enter a valid number (e.g. 0712345678 or 254712345678).'
+      });
+    }
 
+    const numericAmount = Math.round(parseFloat(amount));
+    const channelId = parseInt(process.env.UPESIPAY_CHANNEL_ID || '1', 10);
+    const callbackUrl = process.env.UPESIPAY_CALLBACK_URL || `${req.protocol}://${req.get('host')}/api/donation/webhook`;
+
+    // Initiate M-PESA STK Push with UpesiPay
+    const upesiResponse = await initiateUpesiPayCollection({
+      channel_id: channelId,
+      phone_number: normalizedPhone,
+      amount: numericAmount,
+      callback_url: callbackUrl
+    });
+
+    if (upesiResponse.success && upesiResponse.status_code === 200) {
+      const data = upesiResponse.data || {};
+      const checkoutRequestId = data.checkout_request_id || `ws_CO_${Date.now()}`;
+      const merchantRequestId = data.merchant_request_id || `merch_${Date.now()}`;
+
+      // Record pending donation in database
       const donation = await db.upsertDonation({
-        donor_name: donor_name || 'Anonymous',
-        donor_email: donor_email || 'anonymous@dta-ngo.org',
-        donor_phone: donor_phone || '',
-        amount: verifiedAmount,
-        reference: reference,
-        status: 'success'
+        donor_name: isAnonymous ? 'Anonymous' : (donor_name || 'Anonymous'),
+        donor_email: isAnonymous ? `anon_${Date.now()}@dta-ngo.org` : (donor_email || 'supporter@dta-ngo.org'),
+        donor_phone: normalizedPhone,
+        amount: numericAmount,
+        reference: checkoutRequestId,
+        status: 'pending'
       });
 
-      console.log(`✅ Donation logged: ${reference} | KES ${verifiedAmount} | ${donor_name || 'Anonymous'}`);
+      console.log(`📱 M-PESA STK Push initiated: ${checkoutRequestId} | KES ${numericAmount} | Phone: ${normalizedPhone}`);
 
-      return res.json({ 
-        success: true, 
-        message: 'Donation verified and recorded successfully!', 
-        donation 
+      return res.status(200).json({
+        success: true,
+        message: upesiResponse.message || 'STK push sent successfully. Enter your M-PESA PIN on your phone.',
+        data: {
+          checkout_request_id: checkoutRequestId,
+          merchant_request_id: merchantRequestId,
+          phone_number: normalizedPhone,
+          amount: numericAmount,
+          status: 'sent'
+        },
+        _mock: !!upesiResponse._mock
       });
     } else {
-      // Save failed donation for audit trail
-      await db.upsertDonation({
-        donor_name: donor_name || 'Anonymous',
-        donor_email: donor_email || 'anonymous@dta-ngo.org',
-        donor_phone: donor_phone || '',
-        amount: parseFloat(amount) || 0,
-        reference: reference,
-        status: 'failed'
-      });
-
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Payment verification failed. Please contact us if your card was charged.' 
+      console.warn('⚠️ UpesiPay STK push error:', upesiResponse);
+      const statusCode = upesiResponse.status_code || 400;
+      return res.status(statusCode).json({
+        success: false,
+        message: upesiResponse.message || 'Could not send M-PESA STK prompt. Please check the phone number and try again.',
+        error_code: upesiResponse.error_code,
+        details: upesiResponse.details
       });
     }
   } catch (error) {
-    console.error('Error verifying payment:', error);
-    res.status(500).json({ success: false, message: 'Server error verifying payment.' });
+    console.error('Error initiating UpesiPay STK push:', error);
+    res.status(500).json({ success: false, message: 'Server error initiating M-PESA payment. Please try again.' });
   }
 });
 
-// 6.5 PAYMENTS: Paystack Webhook Handler
-// NOTE: This route uses bodyParser.raw() (registered above) so req.body is a Buffer
-// This is required by Paystack to correctly verify the HMAC-SHA512 signature
-app.post('/api/donate/webhook', async (req, res) => {
+// 6.2 PAYMENTS: Check Status of M-PESA STK Push
+app.get('/api/donation/status/:checkoutRequestId', async (req, res) => {
   try {
-    const signature = req.headers['x-paystack-signature'];
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    const { checkoutRequestId } = req.params;
+    const donation = await db.getDonationByCheckoutId(checkoutRequestId);
 
-    // req.body is a raw Buffer here - convert to string for HMAC
-    const rawBody = req.body instanceof Buffer ? req.body.toString('utf8') : JSON.stringify(req.body);
-
-    // Verify webhook HMAC signature
-    if (secretKey && !secretKey.includes('your_secret_key')) {
-      const expectedHash = crypto.createHmac('sha512', secretKey)
-        .update(rawBody)
-        .digest('hex');
-
-      if (expectedHash !== signature) {
-        console.warn('⚠️ Paystack webhook signature mismatch - possible replay attack or wrong secret.');
-        return res.status(400).json({ success: false, message: 'Invalid webhook signature.' });
-      }
+    if (!donation) {
+      return res.status(404).json({ success: false, message: 'Transaction record not found.' });
     }
 
-    let event;
-    try {
-      event = JSON.parse(rawBody);
-    } catch (parseErr) {
-      return res.status(400).json({ success: false, message: 'Invalid JSON payload.' });
-    }
-
-    console.log(`📦 Paystack webhook received: ${event.event}`);
-
-    if (event.event === 'charge.success') {
-      const data = event.data;
-      const reference = data.reference;
-      const amount = data.amount / 100; // convert kobo → KES
-      const donor_email = (data.customer && data.customer.email) ? data.customer.email : 'anonymous@dta-ngo.org';
-
-      // Extract donor metadata (name & phone) passed during checkout
-      const metadata = data.metadata || {};
-      let donor_name = 'Anonymous';
-      let donor_phone = '';
-
-      if (metadata.custom_fields && Array.isArray(metadata.custom_fields)) {
-        const nameField = metadata.custom_fields.find(f => f.variable_name === 'donor_name');
-        const phoneField = metadata.custom_fields.find(f => f.variable_name === 'donor_phone');
-        if (nameField && nameField.value) donor_name = nameField.value;
-        if (phoneField && phoneField.value && phoneField.value !== 'N/A') donor_phone = phoneField.value;
-      }
-
-      console.log(`✅ Webhook: Donation confirmed ${reference} | KES ${amount} | ${donor_name}`);
-
-      // Upsert donation - webhook is authoritative (overrides any pending status)
-      await db.upsertDonation({
-        donor_name,
-        donor_email,
-        donor_phone,
-        amount,
-        reference,
-        status: 'success'
-      });
-    } else if (event.event === 'charge.failed') {
-      const data = event.data;
-      console.log(`❌ Webhook: Donation failed ${data.reference}`);
-      // Update existing donation record to failed if present
-      await db.upsertDonation({
-        donor_name: 'Unknown',
-        donor_email: (data.customer && data.customer.email) ? data.customer.email : 'anonymous@dta-ngo.org',
-        donor_phone: '',
-        amount: data.amount ? data.amount / 100 : 0,
-        reference: data.reference,
-        status: 'failed'
-      });
-    }
-
-    // Always respond 200 quickly to Paystack
-    res.status(200).json({ success: true, message: 'Webhook received.' });
+    res.json({
+      success: true,
+      status: donation.status, // 'pending', 'success', 'failed', 'cancelled', 'timeout'
+      amount: donation.amount,
+      reference: donation.reference,
+      donor_name: donation.donor_name
+    });
   } catch (error) {
-    console.error('Error handling webhook:', error);
-    res.status(500).json({ success: false, message: 'Webhook server error' });
+    console.error('Error checking donation status:', error);
+    res.status(500).json({ success: false, message: 'Error checking transaction status.' });
   }
+});
+
+// 6.3 PAYMENTS: UpesiPay Webhook Callback Handler
+app.post(['/api/donation/webhook', '/api/donate/webhook'], async (req, res) => {
+  try {
+    const payload = req.body;
+    console.log('📦 UpesiPay Webhook Received:', JSON.stringify(payload));
+
+    const { merchant_request_id, checkout_request_id, reference_id, status } = payload;
+    const lookupRef = checkout_request_id || reference_id || merchant_request_id;
+
+    if (!lookupRef) {
+      return res.status(400).json({ success: false, message: 'Missing transaction identifiers.' });
+    }
+
+    // Normalize UpesiPay status: 'success', 'failed', 'cancelled', 'timeout'
+    let normalizedStatus = 'pending';
+    if (status === 'success') normalizedStatus = 'success';
+    else if (['failed', 'cancelled', 'timeout'].includes(status)) normalizedStatus = 'failed';
+
+    const updated = await db.updateDonationStatus(lookupRef, normalizedStatus);
+
+    if (updated) {
+      console.log(`✅ Webhook: Donation ${lookupRef} updated to status: ${normalizedStatus}`);
+    } else {
+      console.log(`ℹ️ Webhook: Reference ${lookupRef} not yet in DB, creating record.`);
+      await db.upsertDonation({
+        donor_name: 'M-PESA Supporter',
+        donor_email: 'mpesa_donor@dta-ngo.org',
+        donor_phone: '',
+        amount: 0,
+        reference: lookupRef,
+        status: normalizedStatus
+      });
+    }
+
+    // UpesiPay requires HTTP 200/204 acknowledgement
+    res.status(200).json({ success: true, message: 'Webhook callback processed successfully.' });
+  } catch (error) {
+    console.error('Error handling UpesiPay webhook callback:', error);
+    res.status(500).json({ success: false, message: 'Server error processing webhook.' });
+  }
+});
+
+// 6.4 PAYMENTS: Local Simulation Confirmation (for testing and offline demo)
+app.post('/api/donation/simulate-confirm', async (req, res) => {
+  try {
+    const { checkout_request_id } = req.body;
+    if (!checkout_request_id) {
+      return res.status(400).json({ success: false, message: 'checkout_request_id is required.' });
+    }
+
+    const updated = await db.updateDonationStatus(checkout_request_id, 'success');
+    if (updated) {
+      console.log(`🎉 [Simulation] Donation confirmed: ${checkout_request_id} | KES ${updated.amount}`);
+      res.json({ success: true, message: 'M-PESA transaction simulated successfully!', donation: updated });
+    } else {
+      res.status(404).json({ success: false, message: 'Transaction not found.' });
+    }
+  } catch (error) {
+    console.error('Error simulating confirmation:', error);
+    res.status(500).json({ success: false, message: 'Error in simulation.' });
+  }
+});
+
+// Legacy Paystack verification fallback
+app.post('/api/donate/verify', async (req, res) => {
+  const { reference } = req.body;
+  if (!reference) return res.status(400).json({ success: false, message: 'Reference required' });
+  const updated = await db.updateDonationStatus(reference, 'success');
+  res.json({ success: true, message: 'Donation confirmed', donation: updated });
 });
 
 // 6.9 PUBLIC: Total raised (no auth required - for donation page display)

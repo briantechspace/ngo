@@ -9,9 +9,6 @@
   <!-- Style Sheets -->
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/home.css">
-  
-  <!-- Paystack Inline SDK -->
-  <script src="https://js.paystack.co/v1/inline.js"></script>
 </head>
 <body>
 
@@ -362,18 +359,23 @@
       </div>
       
       <div class="donation-box animate-fade" style="animation-delay: 0.2s;">
-        <h3 style="font-family: var(--font-heading);">Secure Donation Portal</h3>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px;">
+          <span style="font-size: 24px;">📱</span>
+          <h3 style="font-family: var(--font-heading); margin: 0;">M-PESA Donation Portal</h3>
+        </div>
+        <p style="text-align: center; font-size: 13px; color: var(--text-muted); margin-top: -6px; margin-bottom: 18px;">Direct M-PESA STK Push powered by UpesiPay</p>
+
         <form id="donation-form" novalidate>
 
           <!-- Anonymous toggle -->
           <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 10px 12px; background: var(--bg-primary); border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
             <input type="checkbox" id="donate-anonymously" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--color-green-primary);">
             <label for="donate-anonymously" style="margin-bottom: 0; cursor: pointer; font-weight: 600; color: var(--text-dark); font-size: 14px; user-select: none;">Donate Anonymously</label>
-            <span style="font-size: 12px; color: var(--text-muted); margin-left: auto;">Skip details</span>
+            <span style="font-size: 12px; color: var(--text-muted); margin-left: auto;">Keep details private</span>
           </div>
 
-          <!-- Donor contact details (hidden when anonymous) -->
-          <div id="donor-info-fields" style="max-height: 400px; opacity: 1; overflow: visible; transition: max-height 0.35s ease, opacity 0.3s ease;">
+          <!-- Donor contact details (name and email hidden when anonymous) -->
+          <div id="donor-info-fields">
             <div class="form-group">
               <label for="donor-name">Full Name <span style="color: var(--color-green-primary);">*</span></label>
               <input type="text" id="donor-name" class="form-control" placeholder="e.g. Jane Wanjiku" required autocomplete="name">
@@ -382,10 +384,13 @@
               <label for="donor-email">Email Address <span style="color: var(--color-green-primary);">*</span></label>
               <input type="email" id="donor-email" class="form-control" placeholder="jane@example.com" required autocomplete="email">
             </div>
-            <div class="form-group">
-              <label for="donor-phone">Phone Number <span style="color: var(--color-green-primary);">*</span></label>
-              <input type="tel" id="donor-phone" class="form-control" placeholder="+254 712 345 678" required autocomplete="tel">
-            </div>
+          </div>
+
+          <!-- M-PESA Phone (Always required for STK Push) -->
+          <div class="form-group">
+            <label for="donor-phone">M-PESA Phone Number <span style="color: var(--color-green-primary);">*</span></label>
+            <input type="tel" id="donor-phone" class="form-control" placeholder="e.g. 0712345678 or 254712345678" required autocomplete="tel">
+            <small style="display: block; font-size: 12px; color: var(--text-muted); margin-top: 4px;">You will receive an M-PESA STK prompt on this number.</small>
           </div>
 
           <!-- Amount selection -->
@@ -397,13 +402,13 @@
               <button type="button" class="preset-btn" data-amount="2500">2,500</button>
               <button type="button" class="preset-btn" data-amount="5000">5,000</button>
             </div>
-            <input type="number" id="custom-donation-amount" class="form-control" placeholder="Or type custom amount (min KES 100)" min="100" step="any">
+            <input type="number" id="custom-donation-amount" class="form-control" placeholder="Or type custom amount (min KES 10)" min="10" step="any">
           </div>
 
-          <button type="submit" id="donate-submit-btn" class="btn btn-primary" style="width: 100%; margin-top: 12px; padding: 14px; font-size: 16px;">
-            &#10084;&hairsp; Donate
+          <button type="submit" id="donate-submit-btn" class="btn btn-secondary" style="width: 100%; margin-top: 12px; padding: 14px; font-size: 16px;">
+            📱 Donate via M-PESA
           </button>
-          <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px;">&#128274; Secured by Paystack &middot; All donations go directly to the field</p>
+          <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px;">🔒 Secured by UpesiPay &middot; Instant M-PESA STK Push</p>
         </form>
       </div>
     </div>
@@ -541,9 +546,6 @@
       </div>
     </div>
   </footer>
-
-  <!-- Paystack Inline JS (required for live checkout) -->
-  <script src="https://js.paystack.co/v1/inline.js"></script>
 
   <!-- Scripts -->
   <script src="js/main.js"></script>

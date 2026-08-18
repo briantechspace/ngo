@@ -1,38 +1,39 @@
+/**
+ * Doorway to Acceptance (DTA) - UpesiPay M-PESA STK Push Donation Client
+ * Handles real-time M-PESA collection initiation, phone normalization,
+ * interactive PIN prompt modal, status polling, and live sum updates.
+ */
+
 document.addEventListener('DOMContentLoaded', () => {
   const donationForm = document.getElementById('donation-form');
   const presetButtons = document.querySelectorAll('.preset-btn');
   const customAmountInput = document.getElementById('custom-donation-amount');
   const anonymousCheckbox = document.getElementById('donate-anonymously');
-  const infoFieldsContainer = document.getElementById('donor-info-fields');
   const nameInput = document.getElementById('donor-name');
   const emailInput = document.getElementById('donor-email');
   const phoneInput = document.getElementById('donor-phone');
+  const nameGroup = nameInput ? nameInput.closest('.form-group') : null;
+  const emailGroup = emailInput ? emailInput.closest('.form-group') : null;
 
-  // Load live raised amount on page load
+  // 1. Load live raised amount on page load
   loadLiveRaisedSum();
 
-  // Toggle donor info fields when anonymous checkbox changes
-  if (anonymousCheckbox && infoFieldsContainer) {
+  // 2. Toggle anonymous donation mode
+  if (anonymousCheckbox) {
     anonymousCheckbox.addEventListener('change', () => {
-      if (anonymousCheckbox.checked) {
-        infoFieldsContainer.style.maxHeight = '0';
-        infoFieldsContainer.style.opacity = '0';
-        infoFieldsContainer.style.overflow = 'hidden';
-        if (nameInput) { nameInput.required = false; nameInput.value = ''; }
-        if (emailInput) { emailInput.required = false; emailInput.value = ''; }
-        if (phoneInput) { phoneInput.required = false; phoneInput.value = ''; }
-      } else {
-        infoFieldsContainer.style.maxHeight = '400px';
-        infoFieldsContainer.style.opacity = '1';
-        infoFieldsContainer.style.overflow = 'visible';
-        if (nameInput) nameInput.required = true;
-        if (emailInput) emailInput.required = true;
-        if (phoneInput) phoneInput.required = true;
+      const isAnon = anonymousCheckbox.checked;
+      if (nameGroup) {
+        nameGroup.style.display = isAnon ? 'none' : 'block';
+        if (nameInput) nameInput.required = !isAnon;
+      }
+      if (emailGroup) {
+        emailGroup.style.display = isAnon ? 'none' : 'block';
+        if (emailInput) emailInput.required = !isAnon;
       }
     });
   }
 
-  // Preset amount buttons
+  // 3. Preset amount button selection
   if (presetButtons && customAmountInput) {
     presetButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -45,39 +46,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     customAmountInput.addEventListener('input', () => {
-      // Clear preset active if user types a custom value not matching any preset
       const val = customAmountInput.value.trim();
       const matchesPreset = Array.from(presetButtons).some(b => b.dataset.amount === val);
       if (!matchesPreset) presetButtons.forEach(b => b.classList.remove('active'));
     });
   }
 
-  // Donation form submit handler
+  // 4. Donation form submit handler
   if (donationForm) {
     donationForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const isAnonymous = anonymousCheckbox && anonymousCheckbox.checked;
+      const phone = phoneInput ? phoneInput.value.trim() : '';
 
-      // Validate donor info if not anonymous
+      // Phone number is required for M-PESA STK Push prompt
+      if (!phone) {
+        showNotification('Please enter your M-PESA phone number to receive the prompt.', 'error');
+        phoneInput && phoneInput.focus();
+        return;
+      }
+
+      // Validate name/email if not anonymous
+      let name = 'Anonymous';
+      let email = `anon_${Date.now()}@dta-ngo.org`;
+
       if (!isAnonymous) {
-        const name = nameInput ? nameInput.value.trim() : '';
-        const email = emailInput ? emailInput.value.trim() : '';
-        const phone = phoneInput ? phoneInput.value.trim() : '';
+        name = nameInput ? nameInput.value.trim() : '';
+        email = emailInput ? emailInput.value.trim() : '';
 
         if (!name) {
-          showNotification('Please enter your full name or choose to donate anonymously.', 'error');
+          showNotification('Please enter your full name or select "Donate Anonymously".', 'error');
           nameInput && nameInput.focus();
           return;
         }
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           showNotification('Please enter a valid email address.', 'error');
           emailInput && emailInput.focus();
-          return;
-        }
-        if (!phone) {
-          showNotification('Please enter your phone number.', 'error');
-          phoneInput && phoneInput.focus();
           return;
         }
       }
@@ -90,44 +95,63 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const amount = parseFloat(amountValue);
-      if (isNaN(amount) || amount < 100) {
-        showNotification('Minimum donation amount is KES 100.', 'error');
+      if (isNaN(amount) || amount < 10) {
+        showNotification('Minimum donation amount is KES 10.', 'error');
         return;
       }
 
-      const donorName = isAnonymous ? 'Anonymous' : (nameInput ? nameInput.value.trim() : 'Anonymous');
-      const donorEmail = isAnonymous ? `anon_${Date.now()}@dta-ngo.org` : (emailInput ? emailInput.value.trim() : '');
-      const donorPhone = isAnonymous ? '' : (phoneInput ? phoneInput.value.trim() : '');
-
       const submitBtn = donationForm.querySelector('button[type="submit"]');
-      const originalText = submitBtn ? submitBtn.innerText : 'Donate';
+      const originalText = submitBtn ? submitBtn.innerHTML : 'Donate';
+
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerText = 'Initializing...';
+        submitBtn.innerHTML = '<span>⏳ Sending M-PESA Prompt...</span>';
       }
 
       try {
-        // Fetch Paystack public key from backend
-        const configRes = await fetch('/api/config/paystack');
-        const configData = await configRes.json();
-        const publicKey = configData.publicKey;
+        const res = await fetch('/api/donation/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            donor_name: name,
+            donor_email: email,
+            donor_phone: phone,
+            amount: amount,
+            isAnonymous: isAnonymous
+          })
+        });
 
-        // Generate unique transaction reference
-        const reference = 'DTA-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
+        const data = await res.json();
 
-        if (!publicKey || publicKey === 'pk_test_developer_mock_key') {
-          // Developer/offline mode - show simulation dialog
-          simulatePaystackCheckout({ donorName, donorEmail, donorPhone, amount, reference, submitBtn, originalText });
+        if (res.ok && data.success) {
+          const checkoutId = data.data.checkout_request_id;
+          const formattedPhone = data.data.phone_number || phone;
+          const isMock = !!data._mock;
+
+          showNotification(data.message || 'M-PESA prompt sent to your phone!', 'success');
+
+          // Open interactive M-PESA STK Push Waiting Modal
+          openMpesaStkModal({
+            checkoutId,
+            phone: formattedPhone,
+            amount,
+            isMock,
+            onComplete: () => {
+              donationForm.reset();
+              presetButtons.forEach(b => b.classList.remove('active'));
+              loadLiveRaisedSum();
+            }
+          });
         } else {
-          // Live/Test mode - use Paystack Inline popup
-          initiatePaystackCheckout({ publicKey, donorName, donorEmail, donorPhone, amount, reference, submitBtn, originalText });
+          showNotification(data.message || 'Could not initiate M-PESA payment. Please verify your phone number.', 'error');
         }
       } catch (err) {
-        console.error('Error starting donation flow:', err);
-        showNotification('Could not connect to payment server. Please try again.', 'error');
+        console.error('Error initiating UpesiPay donation:', err);
+        showNotification('Connection error. Please check your network and try again.', 'error');
+      } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
-          submitBtn.innerText = originalText;
+          submitBtn.innerHTML = originalText;
         }
       }
     });
@@ -135,228 +159,213 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PAYSTACK INLINE CHECKOUT (Real integration)
+// INTERACTIVE M-PESA STK MODAL & POLLING
 // ─────────────────────────────────────────────────────────────────────────────
-function initiatePaystackCheckout({ publicKey, donorName, donorEmail, donorPhone, amount, reference, submitBtn, originalText }) {
-  if (typeof PaystackPop === 'undefined') {
-    showNotification('Payment gateway is loading. Please try again in a moment.', 'error');
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = originalText; }
-    return;
-  }
+function openMpesaStkModal({ checkoutId, phone, amount, isMock, onComplete }) {
+  // Remove existing modal if open
+  const existingModal = document.getElementById('mpesa-stk-modal-overlay');
+  if (existingModal) existingModal.remove();
 
-  if (submitBtn) submitBtn.innerText = 'Opening checkout...';
+  // Create overlay container
+  const modalOverlay = document.createElement('div');
+  modalOverlay.id = 'mpesa-stk-modal-overlay';
+  modalOverlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(10, 17, 40, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+  `;
 
-  const handler = PaystackPop.setup({
-    key: publicKey,
-    email: donorEmail,
-    amount: Math.round(amount * 100), // Paystack expects kobo (smallest unit)
-    currency: 'KES',
-    ref: reference,
-    firstname: donorName !== 'Anonymous' ? donorName.split(' ')[0] : '',
-    lastname: donorName !== 'Anonymous' ? donorName.split(' ').slice(1).join(' ') : '',
-    phone: donorPhone || undefined,
-    label: donorName,
-    metadata: {
-      custom_fields: [
-        {
-          display_name: 'Donor Name',
-          variable_name: 'donor_name',
-          value: donorName
-        },
-        {
-          display_name: 'Phone Number',
-          variable_name: 'donor_phone',
-          value: donorPhone || 'N/A'
-        }
-      ]
-    },
-    callback: function(response) {
-      // Payment completed on Paystack side - verify on backend
-      const ref = response.reference || reference;
-      if (submitBtn) submitBtn.innerText = 'Verifying payment...';
-      verifyOnBackend({ reference: ref, donorName, donorEmail, donorPhone, amount, submitBtn, originalText });
-    },
-    onClose: function() {
-      // User closed the popup without completing
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerText = originalText;
-      }
-      showNotification('Payment window closed. Your donation was not completed.', 'info');
-    }
-  });
-
-  handler.openIframe();
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DEVELOPER SIMULATION OVERLAY (When no real API key is set)
-// ─────────────────────────────────────────────────────────────────────────────
-function simulatePaystackCheckout({ donorName, donorEmail, donorPhone, amount, reference, submitBtn, originalText }) {
-  const overlay = document.createElement('div');
-  Object.assign(overlay.style, {
-    position: 'fixed', top: '0', left: '0',
-    width: '100vw', height: '100vh',
-    backgroundColor: 'rgba(10, 17, 40, 0.75)',
-    backdropFilter: 'blur(6px)',
-    zIndex: '9999',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    animation: 'fadeIn 0.25s ease'
-  });
-
-  const formattedAmount = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(amount);
-
-  overlay.innerHTML = `
-    <div style="background: var(--bg-secondary); border-radius: var(--radius-md); padding: 36px 28px; width: 100%; max-width: 420px; box-shadow: var(--shadow-lg); text-align: center; border: 1px solid var(--border-light); position: relative;">
-      <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #0ca678 0%, #099268 100%); color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 20px; font-weight: bold;">KSh</div>
-      <h3 style="font-size: 20px; margin-bottom: 4px; font-family: var(--font-heading);">DTA Checkout (Test Mode)</h3>
-      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Add your Paystack API keys in <code>.env</code> to enable live payments.</p>
-
-      <div style="background: var(--bg-primary); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 20px; text-align: left; font-size: 14px; border: 1px solid var(--border-light);">
-        <div style="margin-bottom: 8px;"><strong>Donor:</strong> ${escapeHTML(donorName)}</div>
-        <div style="margin-bottom: 8px;"><strong>Email:</strong> ${escapeHTML(donorEmail)}</div>
-        ${donorPhone ? `<div style="margin-bottom: 8px;"><strong>Phone:</strong> ${escapeHTML(donorPhone)}</div>` : ''}
-        <div style="margin-bottom: 8px;"><strong>Amount:</strong> ${formattedAmount}</div>
-        <div style="font-size: 12px; color: var(--text-muted);"><strong>Ref:</strong> <code>${reference}</code></div>
+  modalOverlay.innerHTML = `
+    <div style="background: #ffffff; width: 100%; max-width: 440px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid #e2e8f0; text-align: center; position: relative;" id="mpesa-modal-card">
+      
+      <!-- Top Brand Header -->
+      <div style="background: linear-gradient(135deg, #008751 0%, #00a86b 100%); padding: 24px 20px; color: #ffffff; position: relative;">
+        <button id="close-stk-modal-btn" style="position: absolute; right: 16px; top: 16px; background: rgba(0,0,0,0.2); border: none; color: #ffffff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;" aria-label="Close">&times;</button>
+        <div style="font-size: 32px; margin-bottom: 4px;">📱</div>
+        <h3 style="color: #ffffff; font-size: 20px; margin: 0; font-family: var(--font-heading, sans-serif);">M-PESA STK Push</h3>
+        <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Powered by UpesiPay</p>
       </div>
 
-      <div style="display: flex; gap: 12px;">
-        <button id="sim-success-btn" style="flex:1; padding: 12px 0; border-radius: var(--radius-full); border: none; background: linear-gradient(135deg, #0ca678, #099268); color: #fff; font-family: var(--font-heading); font-weight: 700; cursor: pointer; font-size: 15px; transition: opacity 0.2s ease;">✓ Simulate Success</button>
-        <button id="sim-cancel-btn" style="flex:1; padding: 12px 0; border-radius: var(--radius-full); border: 1px solid var(--border-light); background: transparent; color: var(--text-dark); font-family: var(--font-heading); font-weight: 600; cursor: pointer; font-size: 15px; transition: opacity 0.2s ease;">✕ Cancel</button>
+      <!-- Modal Body -->
+      <div style="padding: 28px 24px;" id="stk-modal-body">
+        <div id="stk-waiting-state">
+          <div style="width: 56px; height: 56px; margin: 0 auto 16px auto; border: 4px solid #e2e8f0; border-top: 4px solid #008751; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          <h4 style="font-size: 18px; color: #1e293b; margin-bottom: 8px;">Check Your Phone</h4>
+          <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+            An M-PESA STK prompt has been sent to <strong>${phone}</strong> for <strong>KES ${Number(amount).toLocaleString()}</strong>.
+          </p>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; font-size: 13px; color: #334155; margin-bottom: 20px;">
+            💡 Enter your <strong>M-PESA PIN</strong> on your mobile handset to authorize this contribution.
+          </div>
+
+          <div style="font-size: 12px; color: #94a3b8;" id="stk-countdown-text">
+            Waiting for confirmation... (<span id="stk-seconds-left">60</span>s)
+          </div>
+
+          ${isMock ? `
+            <div style="margin-top: 18px; padding-top: 14px; border-top: 1px dashed #cbd5e1;">
+              <span style="font-size: 11px; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 999px; font-weight: bold;">DEV SIMULATION</span>
+              <p style="font-size: 12px; color: #64748b; margin: 6px 0 10px 0;">Click below to simulate PIN authorization:</p>
+              <button id="sim-confirm-btn" style="background: #008751; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; width: 100%;">
+                ✓ Simulate PIN Entered (Confirm KES ${amount})
+              </button>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Success State (hidden initially) -->
+        <div id="stk-success-state" style="display: none;">
+          <div style="width: 64px; height: 64px; background: #dcfce7; color: #15803d; border-radius: 50%; font-size: 32px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">✓</div>
+          <h4 style="font-size: 22px; color: #15803d; margin-bottom: 8px;">Donation Confirmed!</h4>
+          <p style="color: #64748b; font-size: 15px; line-height: 1.6; margin-bottom: 18px;">
+            Thank you for your generous contribution of <strong>KES ${Number(amount).toLocaleString()}</strong> to Doorway to Acceptance (DTA).
+          </p>
+          <p style="font-size: 13px; color: #475569; margin-bottom: 20px;">
+            Your support directly fuels grassroots girls empowerment and climate resilience in Kenya.
+          </p>
+          <button id="stk-done-btn" style="background: #008751; color: white; border: none; padding: 12px 24px; border-radius: 9999px; font-weight: 600; cursor: pointer; font-size: 14px; width: 100%;">
+            Done
+          </button>
+        </div>
+
+        <!-- Failed State (hidden initially) -->
+        <div id="stk-failed-state" style="display: none;">
+          <div style="width: 64px; height: 64px; background: #fee2e2; color: #b91c1c; border-radius: 50%; font-size: 32px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">✕</div>
+          <h4 style="font-size: 20px; color: #b91c1c; margin-bottom: 8px;">Payment Not Completed</h4>
+          <p id="stk-fail-reason" style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+            The transaction was cancelled or timed out. Please verify your M-PESA balance and try again.
+          </p>
+          <button id="stk-retry-btn" style="background: #e2e8f0; color: #1e293b; border: none; padding: 12px 24px; border-radius: 9999px; font-weight: 600; cursor: pointer; font-size: 14px; width: 100%;">
+            Try Again
+          </button>
+        </div>
+
       </div>
     </div>
   `;
 
-  document.body.appendChild(overlay);
+  // Inject keyframe animation for spinner if missing
+  if (!document.getElementById('stk-spinner-style')) {
+    const styleEl = document.createElement('style');
+    styleEl.id = 'stk-spinner-style';
+    styleEl.textContent = `
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    `;
+    document.head.appendChild(styleEl);
+  }
 
-  document.getElementById('sim-success-btn').addEventListener('click', () => {
-    overlay.remove();
-    if (submitBtn) submitBtn.innerText = 'Verifying...';
-    verifyOnBackend({ reference, donorName, donorEmail, donorPhone, amount, submitBtn, originalText });
-  });
+  document.body.appendChild(modalOverlay);
 
-  document.getElementById('sim-cancel-btn').addEventListener('click', () => {
-    overlay.remove();
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = originalText; }
-    showNotification('Donation cancelled.', 'info');
-  });
-}
+  // Close button
+  const closeBtn = document.getElementById('close-stk-modal-btn');
+  const doneBtn = document.getElementById('stk-done-btn');
+  const retryBtn = document.getElementById('stk-retry-btn');
+  const simBtn = document.getElementById('sim-confirm-btn');
 
-// ─────────────────────────────────────────────────────────────────────────────
-// BACKEND VERIFICATION — Posts to /api/donate/verify
-// ─────────────────────────────────────────────────────────────────────────────
-async function verifyOnBackend({ reference, donorName, donorEmail, donorPhone, amount, submitBtn, originalText }) {
-  try {
-    const res = await fetch('/api/donate/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        reference,
-        donor_name: donorName,
-        donor_email: donorEmail,
-        donor_phone: donorPhone,
-        amount
-      })
+  let pollInterval = null;
+  let countdownTimer = null;
+  let secondsRemaining = 60;
+
+  const cleanupModal = () => {
+    if (pollInterval) clearInterval(pollInterval);
+    if (countdownTimer) clearInterval(countdownTimer);
+    modalOverlay.remove();
+  };
+
+  closeBtn && closeBtn.addEventListener('click', cleanupModal);
+  doneBtn && doneBtn.addEventListener('click', cleanupModal);
+  retryBtn && retryBtn.addEventListener('click', cleanupModal);
+
+  // Developer Simulation Button handler
+  if (simBtn) {
+    simBtn.addEventListener('click', async () => {
+      simBtn.disabled = true;
+      simBtn.innerText = 'Simulating...';
+      try {
+        await fetch('/api/donation/simulate-confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ checkout_request_id: checkoutId })
+        });
+      } catch (e) {
+        console.error('Simulation error:', e);
+      }
     });
-
-    const data = await res.json();
-
-    if (data.success) {
-      // Reset form
-      const form = document.getElementById('donation-form');
-      if (form) form.reset();
-      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-
-      // Restore anonymous fields visibility
-      const infoFields = document.getElementById('donor-info-fields');
-      if (infoFields) {
-        infoFields.style.maxHeight = '400px';
-        infoFields.style.opacity = '1';
-        infoFields.style.overflow = 'visible';
-      }
-
-      showDonationSuccessModal(donorName, amount, reference);
-      loadLiveRaisedSum(); // refresh live total
-    } else {
-      showNotification(data.message || 'Donation verification failed. Please contact us if payment was deducted.', 'error');
-    }
-  } catch (err) {
-    console.error('Verification error:', err);
-    showNotification('Network error during verification. Please contact support if payment was deducted.', 'error');
-  } finally {
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.innerText = originalText;
-    }
   }
+
+  // Polling logic: check transaction status every 2.5 seconds
+  pollInterval = setInterval(async () => {
+    try {
+      const statusRes = await fetch(`/api/donation/status/${encodeURIComponent(checkoutId)}`);
+      if (statusRes.ok) {
+        const data = await statusRes.json();
+        if (data.status === 'success') {
+          clearInterval(pollInterval);
+          clearInterval(countdownTimer);
+          document.getElementById('stk-waiting-state').style.display = 'none';
+          document.getElementById('stk-success-state').style.display = 'block';
+          onComplete && onComplete();
+        } else if (['failed', 'cancelled', 'timeout'].includes(data.status)) {
+          clearInterval(pollInterval);
+          clearInterval(countdownTimer);
+          document.getElementById('stk-waiting-state').style.display = 'none';
+          document.getElementById('stk-failed-state').style.display = 'block';
+        }
+      }
+    } catch (e) {
+      console.warn('Status poll check failed:', e);
+    }
+  }, 2500);
+
+  // Countdown timer
+  countdownTimer = setInterval(() => {
+    secondsRemaining -= 1;
+    const secEl = document.getElementById('stk-seconds-left');
+    if (secEl) secEl.innerText = secondsRemaining;
+
+    if (secondsRemaining <= 0) {
+      clearInterval(pollInterval);
+      clearInterval(countdownTimer);
+      const waitingState = document.getElementById('stk-waiting-state');
+      const failedState = document.getElementById('stk-failed-state');
+      if (waitingState && failedState && waitingState.style.display !== 'none') {
+        waitingState.style.display = 'none';
+        failedState.style.display = 'block';
+        const failReason = document.getElementById('stk-fail-reason');
+        if (failReason) failReason.innerText = 'The request timed out before confirmation. If your M-PESA balance was deducted, our system will automatically credit the donation once the callback arrives.';
+      }
+    }
+  }, 1000);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DONATION SUCCESS MODAL
-// ─────────────────────────────────────────────────────────────────────────────
-function showDonationSuccessModal(donorName, amount, reference) {
-  const modal = document.createElement('div');
-  Object.assign(modal.style, {
-    position: 'fixed', top: '0', left: '0',
-    width: '100vw', height: '100vh',
-    backgroundColor: 'rgba(10, 17, 40, 0.75)',
-    backdropFilter: 'blur(6px)',
-    zIndex: '9999',
-    display: 'flex', alignItems: 'center', justifyContent: 'center'
-  });
-
-  const formattedAmount = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(amount);
-  const displayName = (donorName && donorName !== 'Anonymous') ? donorName : 'Generous Friend';
-
-  modal.innerHTML = `
-    <div style="background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 48px 36px; width: 100%; max-width: 480px; box-shadow: var(--shadow-lg); text-align: center; border: 1px solid var(--border-light); animation: fadeIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-      <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #0ca678 0%, #099268 100%); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px auto; font-size: 36px; color: white; box-shadow: 0 8px 24px rgba(12, 166, 120, 0.4);">✓</div>
-      <h3 style="font-size: 26px; margin-bottom: 8px; font-family: var(--font-heading);">Thank You, ${escapeHTML(displayName)}!</h3>
-      <p style="color: var(--color-green-primary); font-weight: 700; font-size: 20px; margin-bottom: 16px;">${formattedAmount} Received</p>
-      <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 28px; line-height: 1.6;">Your generous contribution empowers women farmers, keeps girls in school, and funds climate restoration in Kenya. Together we are building a cleaner, fairer world. 🌿</p>
-      <div style="font-size: 12px; color: var(--text-muted); padding: 10px 16px; background: var(--bg-primary); border-radius: var(--radius-sm); border: 1px solid var(--border-light); font-family: monospace; display: inline-block; margin-bottom: 28px;">
-        Ref: ${escapeHTML(reference)}
-      </div>
-      <div>
-        <button id="close-success-modal" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 16px;">Close</button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-  document.getElementById('close-success-modal').addEventListener('click', () => modal.remove());
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// LIVE RAISED SUM — Fetches public stats
+// FETCH LIVE TOTAL RAISED SUM (Public Endpoint)
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadLiveRaisedSum() {
-  const el = document.getElementById('live-raised-sum');
-  if (!el) return;
+  const sumElement = document.getElementById('live-raised-sum');
+  if (!sumElement) return;
 
   try {
     const res = await fetch('/api/public/stats');
-    const data = await res.json();
-    if (data.success && data.stats) {
-      el.innerText = new Intl.NumberFormat('en-KE', {
-        style: 'currency', currency: 'KES', maximumFractionDigits: 0
-      }).format(data.stats.totalRaised || 0);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.stats) {
+        const total = parseFloat(data.stats.totalRaised) || 0;
+        sumElement.innerText = `KES ${total.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
     }
   } catch (err) {
-    // Fail silently - element retains default value
-    console.warn('Could not load live stats:', err);
+    console.warn('Could not load live raised stats:', err);
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HTML ESCAPE UTILITY
-// ─────────────────────────────────────────────────────────────────────────────
-function escapeHTML(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }
