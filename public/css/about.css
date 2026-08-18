@@ -1,43 +1,43 @@
 /* About Header Section */
 .about-hero {
-  padding: calc(var(--header-height) + 40px) 0 60px 0;
-  background: linear-gradient(135deg, rgba(231, 241, 255, 0.3) 0%, rgba(232, 245, 233, 0.3) 100%);
+  padding: calc(var(--header-height) + 32px) 0 48px 0;
+  background: linear-gradient(135deg, rgba(231, 241, 255, 0.4) 0%, rgba(232, 245, 233, 0.4) 100%);
   text-align: center;
 }
 
 .about-hero h1 {
-  font-size: 48px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .about-hero p {
   color: var(--text-muted);
-  max-width: 600px;
+  max-width: 620px;
   margin: 0 auto;
-  font-size: 18px;
+  font-size: clamp(15px, 2.5vw, 18px);
+  line-height: 1.6;
 }
 
 /* Story Section */
 .about-story {
-  padding: 80px 0;
+  padding: 64px 0;
   background-color: var(--bg-secondary);
 }
 
 .story-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 60px;
+  gap: 48px;
   align-items: center;
 }
 
 .story-content h2 {
-  font-size: 36px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .story-content p {
   color: var(--text-muted);
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  line-height: 1.7;
 }
 
 .story-img-wrapper {
@@ -48,31 +48,35 @@
   width: 100%;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+  display: block;
 }
 
 @media (max-width: 768px) {
+  .about-story {
+    padding: 48px 0;
+  }
   .story-grid {
     grid-template-columns: 1fr;
-    gap: 40px;
+    gap: 32px;
   }
 }
 
 /* Mission & Vision Section */
 .mission-vision {
-  padding: 80px 0;
+  padding: 64px 0;
   background-color: var(--bg-primary);
 }
 
 .mission-vision-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 32px;
+  gap: 28px;
 }
 
 .mv-card {
   background-color: var(--bg-secondary);
   border-radius: var(--radius-lg);
-  padding: 40px;
+  padding: 32px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-light);
   display: flex;
@@ -87,14 +91,14 @@
 }
 
 .mv-icon {
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  margin-bottom: 24px;
+  font-size: 22px;
+  margin-bottom: 20px;
 }
 
 .mv-card.mission .mv-icon {
@@ -108,27 +112,32 @@
 }
 
 .mv-card h3 {
-  font-size: 24px;
-  margin-bottom: 16px;
+  font-size: 20px;
+  margin-bottom: 12px;
 }
 
 .mv-card p {
   color: var(--text-muted);
   flex-grow: 1;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 @media (max-width: 768px) {
+  .mission-vision {
+    padding: 48px 0;
+  }
   .mission-vision-grid {
     grid-template-columns: 1fr;
   }
   .mv-card {
-    padding: 30px;
+    padding: 24px 18px;
   }
 }
 
 /* FAQ Accordion Section */
 .faq-section {
-  padding: 80px 0;
+  padding: 64px 0;
   background-color: var(--bg-secondary);
 }
 
@@ -140,7 +149,7 @@
 .faq-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .faq-item {
@@ -159,19 +168,21 @@
 
 .faq-header {
   width: 100%;
-  padding: 20px 24px;
+  padding: 18px 20px;
+  min-height: 52px;
   background: none;
   border: none;
   text-align: left;
   font-family: var(--font-heading);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-dark);
   cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  touch-action: manipulation;
 }
 
 .faq-icon {
@@ -182,6 +193,7 @@
   justify-content: center;
   transition: var(--transition-smooth);
   color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .faq-item.active .faq-icon {
@@ -196,16 +208,115 @@
 }
 
 .faq-body-content {
-  padding: 0 24px 20px 24px;
+  padding: 0 20px 18px 20px;
   font-size: 15px;
   color: var(--text-muted);
+  line-height: 1.6;
   border-top: 1px solid transparent;
 }
 
 .faq-item.active .faq-body {
-  max-height: 300px; /* arbitrary max height to allow smooth transition */
+  max-height: 400px;
 }
 
 .faq-item.active .faq-body-content {
   border-top-color: rgba(226, 232, 240, 0.6);
+}
+
+@media (max-width: 768px) {
+  .faq-section {
+    padding: 48px 0;
+  }
+}
+
+/* Leadership Section Styles */
+.leadership-section {
+  padding: 64px 0;
+  background-color: var(--bg-secondary);
+}
+
+.leadership-grid {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.leader-card {
+  max-width: 450px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 24px !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+.leader-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-blue-primary);
+}
+
+.leader-img-wrapper {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  margin-bottom: 20px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid var(--color-blue-primary);
+  box-shadow: var(--shadow-md);
+  transition: var(--transition-smooth);
+}
+
+.leader-card:hover .leader-img-wrapper {
+  transform: scale(1.04);
+  border-color: var(--color-green-primary);
+}
+
+.leader-img-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.leader-card h3 {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-blue-dark);
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.leader-card h4 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-red-primary);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 16px;
+}
+
+.leader-card blockquote {
+  font-size: 15px;
+  font-style: italic;
+  color: var(--text-muted);
+  line-height: 1.6;
+  position: relative;
+  padding: 0 10px;
+}
+
+@media (max-width: 576px) {
+  .leadership-section {
+    padding: 48px 0;
+  }
+  .leader-card {
+    padding: 24px 16px !important;
+  }
+  .leader-img-wrapper {
+    width: 150px;
+    height: 150px;
+  }
 }

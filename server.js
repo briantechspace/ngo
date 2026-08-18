@@ -9,8 +9,103 @@ require('dotenv').config();
 const db = require('./db');
 const { upload, getUploadedFileUrl } = require('./cloudinary');
 
+// Dynamic production optional modules
+let compression = null;
+let helmet = null;
+let rateLimit = null;
+
+try { compression = require('compression'); } catch (_) {}
+try { helmet = require('helmet'); } catch (_) {}
+try { rateLimit = require('express-rate-limit'); } catch (_) {}
+
 const app = express();
 const PORT = process.env.PORT || 5055;
+
+// Trust reverse proxies (Nginx, Render, Heroku, Cloudflare, AWS ALB)
+app.set('trust proxy', 1);
+
+// Optional gzip compression
+if (compression) {
+  app.use(compression());
+}
+
+// Security Headers: Helmet or Built-in Headers
+if (helmet) {
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://js.paystack.co", "https://cdn.quilljs.com", "https://cdnjs.cloudflare.com"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.quilljs.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+        imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://*.paystack.co", "https://*.paystack.com"],
+        frameSrc: ["'self'", "https://js.paystack.co", "https://checkout.paystack.com"],
+        connectSrc: ["'self'", "https://api.paystack.co", "https://*.paystack.co"]
+      }
+    },
+    crossOriginEmbedderPolicy: false
+  }));
+} else {
+  // Built-in standard security headers fallback
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    if (process.env.NODE_ENV === 'production') {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+  });
+}
+
+// Rate Limiter Factory (supports express-rate-limit or built-in in-memory token bucket)
+function createRateLimiter(windowMs, maxRequests, message) {
+  if (rateLimit) {
+    return rateLimit({
+      windowMs,
+      max: maxRequests,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { success: false, message }
+    });
+  }
+
+  const hits = new Map();
+  return (req, res, next) => {
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    const record = hits.get(ip) || { count: 0, resetTime: now + windowMs };
+
+    if (now > record.resetTime) {
+      record.count = 1;
+      record.resetTime = now + windowMs;
+    } else {
+      record.count++;
+    }
+
+    hits.set(ip, record);
+
+    // Prune old records periodically
+    if (hits.size > 3000) {
+      for (const [k, v] of hits.entries()) {
+        if (now > v.resetTime) hits.delete(k);
+      }
+    }
+
+    if (record.count > maxRequests) {
+      return res.status(429).json({ success: false, message });
+    }
+    next();
+  };
+}
+
+const authLimiter = createRateLimiter(15 * 60 * 1000, 10, 'Too many login attempts. Please try again after 15 minutes.');
+const submitLimiter = createRateLimiter(10 * 60 * 1000, 15, 'Too many submissions from this IP. Please wait a few minutes.');
+const generalApiLimiter = createRateLimiter(10 * 60 * 1000, 300, 'Too many requests. Please slow down.');
+
+// Apply general limiter to all /api/ endpoints
+app.use('/api', generalApiLimiter);
 
 // Raw body capture for Paystack webhook HMAC verification
 // Must be registered BEFORE bodyParser.json()
@@ -18,13 +113,45 @@ app.use('/api/donate/webhook', bodyParser.raw({ type: 'application/json' }));
 
 // Middleware for all other routes
 app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json({ limit: '2mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '2mb' }));
+
+// Static asset caching in production
+const staticOptions = process.env.NODE_ENV === 'production'
+  ? { maxAge: '1d', etag: true }
+  : {};
 
 // Serve static frontend assets
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), staticOptions));
 // Support serving uploaded images locally if Cloudinary is not used
-app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), staticOptions));
+
+// --- Password Hashing & Verification Helper ---
+function verifyPassword(inputPassword, storedHashOrPlain) {
+  if (!inputPassword || !storedHashOrPlain) return false;
+
+  // Format: pbkdf2:salt:hash
+  if (storedHashOrPlain.startsWith('pbkdf2:')) {
+    const parts = storedHashOrPlain.split(':');
+    if (parts.length === 3) {
+      const salt = parts[1];
+      const key = parts[2];
+      const derived = crypto.pbkdf2Sync(inputPassword, salt, 100000, 64, 'sha512').toString('hex');
+      const a = Buffer.from(derived, 'utf8');
+      const b = Buffer.from(key, 'utf8');
+      return a.length === b.length && crypto.timingSafeEqual(a, b);
+    }
+  }
+
+  // Constant-time string comparison for plain text env credentials
+  const a = Buffer.from(inputPassword, 'utf8');
+  const b = Buffer.from(storedHashOrPlain, 'utf8');
+  if (a.length !== b.length) {
+    crypto.timingSafeEqual(a, a);
+    return false;
+  }
+  return crypto.timingSafeEqual(a, b);
+}
 
 // --- Auth Session Token Verification Helpers (Built-in Crypto) ---
 function generateToken() {
@@ -70,17 +197,15 @@ function authMiddleware(req, res, next) {
 // --- Paystack Verification Helper ---
 function verifyPaystackPayment(reference) {
   return new Promise((resolve, reject) => {
-    // If secret key is not set, allow mock verification for developers
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
     if (!secretKey || secretKey.includes('your_secret_key')) {
       console.log(`ℹ️ [Paystack Mock] Verifying reference: ${reference}`);
-      // Simulate successful payment validation (amount passed in body, convert to kobo)
       return resolve({
         status: true,
         data: {
           status: 'success',
           reference: reference,
-          amount: 0, // Will use body amount directly in the verify route for mock
+          amount: 0,
           currency: 'KES',
           customer: { email: 'mock_donor@example.com' },
           _mock: true
@@ -100,11 +225,7 @@ function verifyPaystackPayment(reference) {
 
     const req = https.request(options, res => {
       let data = '';
-
-      res.on('data', chunk => {
-        data += chunk;
-      });
-
+      res.on('data', chunk => { data += chunk; });
       res.on('end', () => {
         try {
           const responseData = JSON.parse(data);
@@ -115,23 +236,43 @@ function verifyPaystackPayment(reference) {
       });
     });
 
-    req.on('error', error => {
-      reject(error);
-    });
-
+    req.on('error', error => { reject(error); });
     req.end();
   });
 }
 
 // --- API ENDPOINTS ---
 
-// Admin Login Endpoint
-app.post('/api/admin/login', (req, res) => {
+// Health check endpoint for uptime monitors, kubernetes, or load balancers
+app.get('/api/health', (req, res) => {
+  const isPostgres = db.isPostgresConnected();
+  const uptimeSeconds = Math.floor(process.uptime());
+  const mem = process.memoryUsage();
+
+  res.json({
+    status: 'ok',
+    uptime: `${uptimeSeconds}s`,
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    database: {
+      mode: isPostgres ? 'postgresql' : (process.env.USE_MOCK_DB === 'true' ? 'mock' : 'in-memory-fallback'),
+      connected: isPostgres || process.env.USE_MOCK_DB === 'true' || !process.env.DATABASE_URL
+    },
+    storage: (process.env.CLOUDINARY_CLOUD_NAME && !process.env.CLOUDINARY_CLOUD_NAME.includes('your_cloud_name')) ? 'cloudinary' : 'local',
+    memory: {
+      rss: `${Math.round(mem.rss / 1024 / 1024)} MB`,
+      heapUsed: `${Math.round(mem.heapUsed / 1024 / 1024)} MB`
+    }
+  });
+});
+
+// Admin Login Endpoint (Protected by rate limiting & timing-safe password check)
+app.post('/api/admin/login', authLimiter, (req, res) => {
   const { username, password } = req.body;
   const correctUser = process.env.ADMIN_USERNAME || 'admin';
   const correctPass = process.env.ADMIN_PASSWORD || 'eco_admin_2026';
 
-  if (username === correctUser && password === correctPass) {
+  if (username === correctUser && verifyPassword(password, correctPass)) {
     const token = generateToken();
     res.json({ success: true, token });
   } else {
@@ -142,7 +283,6 @@ app.post('/api/admin/login', (req, res) => {
 // 1. PUBLIC: Fetch Paystack Public Key
 app.get('/api/config/paystack', (req, res) => {
   const publicKey = process.env.PAYSTACK_PUBLIC_KEY;
-  // If not configured, send a developer key placeholder
   if (!publicKey || publicKey.includes('your_public_key')) {
     return res.json({ publicKey: 'pk_test_developer_mock_key' });
   }
@@ -186,7 +326,7 @@ app.get('/api/blogs/:slug', async (req, res) => {
   }
 });
 
-// 4. BLOGS: Upload image & create new blog post (Admin protected ideally)
+// 4. BLOGS: Upload image & create new blog post (Admin protected)
 app.post('/api/blogs', authMiddleware, upload.single('image'), async (req, res) => {
   try {
     const { title, body } = req.body;
@@ -205,8 +345,8 @@ app.post('/api/blogs', authMiddleware, upload.single('image'), async (req, res) 
   }
 });
 
-// 5. SUPPORT: Submit support request
-app.post('/api/support', async (req, res) => {
+// 5. SUPPORT: Submit support request (Protected by submitLimiter)
+app.post('/api/support', submitLimiter, async (req, res) => {
   try {
     const { name, email, phone, message } = req.body;
 
@@ -226,8 +366,8 @@ app.post('/api/support', async (req, res) => {
   }
 });
 
-// 5.5 NEWSLETTER: Subscribe (public)
-app.post('/api/newsletter/subscribe', async (req, res) => {
+// 5.5 NEWSLETTER: Subscribe (Protected by submitLimiter)
+app.post('/api/newsletter/subscribe', submitLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -516,8 +656,29 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-
 // Start Server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 NGO Backend running in ${process.env.NODE_ENV || 'development'} mode on http://localhost:${PORT}`);
 });
+
+// Graceful Shutdown handling (SIGTERM, SIGINT)
+async function handleShutdown(signal) {
+  console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
+  server.close(async () => {
+    console.log('HTTP server connections closed.');
+    await db.closePool();
+    console.log('PostgreSQL connections closed. Exiting process cleanly.');
+    process.exit(0);
+  });
+
+  // Force close after 10s if connections remain stuck
+  setTimeout(() => {
+    console.error('⚠️ Forcefully terminating process after 10s timeout.');
+    process.exit(1);
+  }, 10000);
+}
+
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+process.on('SIGINT', () => handleShutdown('SIGINT'));
+
+module.exports = { app, server };

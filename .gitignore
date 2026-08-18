@@ -1,40 +1,75 @@
-# Dependency directories
+# ==============================================================================
+# DEPENDENCY DIRECTORIES
+# ==============================================================================
 node_modules/
 jspm_packages/
+.pnp/
+.pnp.js
 
-# Local environment configuration keys
+# ==============================================================================
+# ENVIRONMENT & SECRETS (Never commit real API keys or database passwords)
+# ==============================================================================
 .env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
 
-# Local Multer Uploads (for fallback disk storage)
+# Explicitly track the environment template
+!.env.example
+
+# ==============================================================================
+# LOCAL MEDIA & UPLOADS
+# ==============================================================================
+# Ignore uploaded media files while keeping directory structure
 public/uploads/*
 !public/uploads/.gitkeep
 
-# Logs and Diagnostics
+# ==============================================================================
+# LOCAL SCRATCH & DEVELOPMENT SCRIPTS
+# ==============================================================================
+scratch/
+test-*.js
+
+# ==============================================================================
+# LOGS & DIAGNOSTICS
+# ==============================================================================
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 lerna-debug.log*
-logs/
-*.log
-
-# Diagnostic reports (Node.js)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
-# IDE / Editor configurations
+# ==============================================================================
+# IDE & EDITOR FILES
+# ==============================================================================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 .idea/
-.vscode/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.sublime-project
+*.sublime-workspace
 
-# OS metadata
+# ==============================================================================
+# OS & SYSTEM ARTIFACTS
+# ==============================================================================
 .DS_Store
-Thumbs.db
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 ehthumbs.db
+Thumbs.db
 Desktop.ini
+[Dd]esktop.ini
