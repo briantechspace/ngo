@@ -343,23 +343,134 @@ async function loadDonations() {
   }
 }
 
+// Helper to get YYYY-MM-DD in East Africa Time (Africa/Nairobi - UTC+3)
+function getEatDateString(dateInput) {
+  if (!dateInput) return '';
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return '';
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Africa/Nairobi',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(d);
+  } catch (e) {
+    const utc = d.getTime() + (3 * 3600 * 1000);
+    return new Date(utc).toISOString().slice(0, 10);
+  }
+}
+
+// Live East Africa Clock
+function updateEatLiveClock() {
+  const clockEl = document.getElementById('eat-live-clock');
+  if (!clockEl) return;
+  try {
+    const timeStr = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Africa/Nairobi',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    }).format(new Date());
+    clockEl.innerText = `🕒 ${timeStr} EAT (Nairobi)`;
+  } catch (e) {
+    clockEl.innerText = '🕒 EAT (UTC+3)';
+  }
+}
+
 function filterAndRenderDonations() {
   const searchInput = document.getElementById('donor-search-input');
   const statusFilter = document.getElementById('donation-status-filter');
+  const periodPreset = document.getElementById('donation-period-preset');
+  const fromDateInput = document.getElementById('donation-from-date');
+  const toDateInput = document.getElementById('donation-to-date');
+  const badge = document.getElementById('filtered-donations-badge');
+
   const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
   const status = statusFilter ? statusFilter.value : 'all';
+  const preset = periodPreset ? periodPreset.value : 'all';
+  let fromDate = fromDateInput ? fromDateInput.value : '';
+  let toDate = toDateInput ? toDateInput.value : '';
+
+  const todayEat = getEatDateString(new Date());
+  const now = new Date();
+
+  // Handle Preset Calculations based on Africa/Nairobi
+  if (preset === 'today') {
+    fromDate = todayEat;
+    toDate = todayEat;
+    if (fromDateInput) fromDateInput.value = todayEat;
+    if (toDateInput) toDateInput.value = todayEat;
+  } else if (preset === 'yesterday') {
+    const yDate = new Date(now.getTime() - (24 * 3600 * 1000));
+    const yesterdayEat = getEatDateString(yDate);
+    fromDate = yesterdayEat;
+    toDate = yesterdayEat;
+    if (fromDateInput) fromDateInput.value = yesterdayEat;
+    if (toDateInput) toDateInput.value = yesterdayEat;
+  } else if (preset === 'this_week') {
+    // Current Monday in EAT
+    const dayOfWeek = (now.getDay() + 6) % 7; // Monday = 0
+    const monday = new Date(now.getTime() - (dayOfWeek * 24 * 3600 * 1000));
+    fromDate = getEatDateString(monday);
+    toDate = todayEat;
+    if (fromDateInput) fromDateInput.value = fromDate;
+    if (toDateInput) toDateInput.value = toDate;
+  } else if (preset === 'this_month') {
+    fromDate = `${todayEat.slice(0, 7)}-01`;
+    toDate = todayEat;
+    if (fromDateInput) fromDateInput.value = fromDate;
+    if (toDateInput) toDateInput.value = toDate;
+  } else if (preset === 'last_30_days') {
+    const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 3600 * 1000));
+    fromDate = getEatDateString(thirtyDaysAgo);
+    toDate = todayEat;
+    if (fromDateInput) fromDateInput.value = fromDate;
+    if (toDateInput) toDateInput.value = toDate;
+  } else if (preset === 'this_year') {
+    fromDate = `${todayEat.slice(0, 4)}-01-01`;
+    toDate = todayEat;
+    if (fromDateInput) fromDateInput.value = fromDate;
+    if (toDateInput) toDateInput.value = toDate;
+  } else if (preset === 'all') {
+    if (fromDateInput) fromDateInput.value = '';
+    if (toDateInput) toDateInput.value = '';
+    fromDate = '';
+    toDate = '';
+  }
 
   let filtered = currentDonations.filter(d => {
+    // 1. Status Filter
     const matchesStatus = status === 'all' || d.status === status;
+
+    // 2. Keyword Query Search
     const matchesQuery = !query || 
       (d.donor_name && d.donor_name.toLowerCase().includes(query)) ||
       (d.donor_email && d.donor_email.toLowerCase().includes(query)) ||
       (d.donor_phone && d.donor_phone.toLowerCase().includes(query)) ||
       (d.reference && d.reference.toLowerCase().includes(query));
-    return matchesStatus && matchesQuery;
+
+    // 3. Date Range Filter in East Africa Time
+    const donationEatDate = getEatDateString(d.created_at);
+    let matchesDate = true;
+    if (fromDate && donationEatDate < fromDate) matchesDate = false;
+    if (toDate && donationEatDate > toDate) matchesDate = false;
+
+    return matchesStatus && matchesQuery && matchesDate;
   });
 
+  // Calculate filtered sum
+  const filteredSuccessTotal = filtered
+    .filter(d => d.status === 'success')
+    .reduce((acc, d) => acc + parseFloat(d.amount || 0), 0);
+
+  if (badge) {
+    badge.innerText = `Showing ${filtered.length} of ${currentDonations.length} records (KES ${filteredSuccessTotal.toLocaleString('en-KE', { minimumFractionDigits: 2 })})`;
+  }
+
   renderDonations(filtered);
+  renderDonationCharts(filtered);
 }
 
 function renderDonations(donations) {
@@ -367,12 +478,15 @@ function renderDonations(donations) {
   if (!tbody) return;
 
   if (donations.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">No donation records matching your filter.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">No donation records found for this period or search criteria.</td></tr>';
     return;
   }
 
   tbody.innerHTML = donations.map(d => {
     const statusClass = d.status === 'success' ? 'status-success' : (d.status === 'pending' ? 'status-pending' : 'status-failed');
+    const eatDateStr = getEatDateString(d.created_at);
+    const eatTimeFormatted = new Date(d.created_at).toLocaleTimeString('en-GB', { timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit' });
+
     return `
       <tr>
         <td style="font-weight: 600;">${escapeHTML(d.donor_name || 'Anonymous')}</td>
@@ -389,7 +503,10 @@ function renderDonations(donations) {
             <option value="refunded" ${d.status === 'refunded' ? 'selected' : ''}>↩ Refunded</option>
           </select>
         </td>
-        <td style="font-size: 12px; color: var(--text-muted);">${new Date(d.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</td>
+        <td style="font-size: 12px; color: var(--text-muted);">
+          <div>${eatDateStr}</div>
+          <small style="color: var(--text-muted); font-size: 11px;">${eatTimeFormatted} EAT</small>
+        </td>
         <td style="white-space: nowrap;">
           <a href="/receipt?ref=${encodeURIComponent(d.reference)}" target="_blank" class="btn btn-outline btn-sm" style="color: var(--color-blue-primary); border-color: var(--color-blue-primary); padding: 4px 8px; font-size: 12px; margin-right: 4px;">
             📄 Receipt
@@ -964,10 +1081,50 @@ function initCsvExports() {
 function initSearchAndFilters() {
   const donorSearch = document.getElementById('donor-search-input');
   const statusFilter = document.getElementById('donation-status-filter');
+  const periodPreset = document.getElementById('donation-period-preset');
+  const fromDateInput = document.getElementById('donation-from-date');
+  const toDateInput = document.getElementById('donation-to-date');
+  const resetBtn = document.getElementById('reset-donation-filter-btn');
   const msgSearch = document.getElementById('message-search-input');
 
   if (donorSearch) donorSearch.addEventListener('input', filterAndRenderDonations);
   if (statusFilter) statusFilter.addEventListener('change', filterAndRenderDonations);
+  
+  if (periodPreset) {
+    periodPreset.addEventListener('change', () => {
+      filterAndRenderDonations();
+    });
+  }
+
+  if (fromDateInput) {
+    fromDateInput.addEventListener('change', () => {
+      if (periodPreset) periodPreset.value = 'custom';
+      filterAndRenderDonations();
+    });
+  }
+
+  if (toDateInput) {
+    toDateInput.addEventListener('change', () => {
+      if (periodPreset) periodPreset.value = 'custom';
+      filterAndRenderDonations();
+    });
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      if (donorSearch) donorSearch.value = '';
+      if (statusFilter) statusFilter.value = 'all';
+      if (periodPreset) periodPreset.value = 'all';
+      if (fromDateInput) fromDateInput.value = '';
+      if (toDateInput) toDateInput.value = '';
+      filterAndRenderDonations();
+      showNotification('Donation filters reset to All Time.', 'info', 2500);
+    });
+  }
+
+  // East Africa Live Clock
+  updateEatLiveClock();
+  setInterval(updateEatLiveClock, 1000);
 
   if (msgSearch) {
     msgSearch.addEventListener('input', () => {

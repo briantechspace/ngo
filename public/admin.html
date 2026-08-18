@@ -204,26 +204,71 @@
           </div>
         </div>
 
-        <!-- Action & Search Toolbar -->
-        <div style="margin-bottom: 18px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; background-color: var(--bg-secondary); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-          <div style="display: flex; flex-wrap: wrap; gap: 10px; flex: 1; max-width: 600px;">
-            <input type="text" id="donor-search-input" class="form-control" placeholder="Search donor name, email, phone, reference..." style="flex: 1; min-width: 200px; margin-bottom: 0;">
-            <select id="donation-status-filter" class="form-control" style="width: auto; margin-bottom: 0;">
-              <option value="all">All Statuses</option>
-              <option value="success">Success Only</option>
-              <option value="pending">Pending Only</option>
-              <option value="failed">Failed Only</option>
-            </select>
+        <!-- Action & Search Toolbar with East Africa / Nairobi Date Filter -->
+        <div style="margin-bottom: 18px; display: flex; flex-direction: column; gap: 12px; background-color: var(--bg-secondary); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
+          
+          <!-- Top Row: Search, Status, & Actions -->
+          <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; flex: 1; max-width: 650px;">
+              <input type="text" id="donor-search-input" class="form-control" placeholder="🔍 Search donor name, email, phone, reference..." style="flex: 1; min-width: 220px; margin-bottom: 0;">
+              <select id="donation-status-filter" class="form-control" style="width: auto; margin-bottom: 0;">
+                <option value="all">All Statuses</option>
+                <option value="success">Success Only</option>
+                <option value="pending">Pending Only</option>
+                <option value="failed">Failed Only</option>
+              </select>
+            </div>
+
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button id="open-manual-donation-btn" class="btn btn-secondary btn-sm">
+                + Record Offline Donation
+              </button>
+              <button id="export-donations-csv-btn" class="btn btn-outline btn-sm">
+                📥 Export CSV
+              </button>
+            </div>
           </div>
 
-          <div style="display: flex; gap: 10px;">
-            <button id="open-manual-donation-btn" class="btn btn-secondary btn-sm">
-              + Record Offline Donation
-            </button>
-            <button id="export-donations-csv-btn" class="btn btn-outline btn-sm">
-              📥 Export CSV
-            </button>
+          <!-- Bottom Row: East Africa Nairobi Date & Calendar Period Filter -->
+          <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-light); padding-top: 12px;">
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+                📅 Period (EAT):
+              </span>
+              <select id="donation-period-preset" class="form-control" style="width: auto; margin-bottom: 0; font-size: 13px; font-weight: 600;">
+                <option value="all">All Time</option>
+                <option value="today">Today (Nairobi EAT)</option>
+                <option value="yesterday">Yesterday (EAT)</option>
+                <option value="this_week">This Week (Mon - Sun)</option>
+                <option value="this_month">This Month</option>
+                <option value="last_30_days">Past 30 Days</option>
+                <option value="this_year">This Year</option>
+                <option value="custom">Custom Calendar Range 🗓️</option>
+              </select>
+
+              <div id="custom-date-range-container" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <label for="donation-from-date" style="font-size: 12px; color: var(--text-muted); margin: 0;">From:</label>
+                <input type="date" id="donation-from-date" class="form-control" style="width: auto; margin-bottom: 0; font-size: 12.5px; padding: 6px 10px;">
+                <label for="donation-to-date" style="font-size: 12px; color: var(--text-muted); margin: 0;">To:</label>
+                <input type="date" id="donation-to-date" class="form-control" style="width: auto; margin-bottom: 0; font-size: 12.5px; padding: 6px 10px;">
+              </div>
+
+              <button type="button" id="reset-donation-filter-btn" class="btn btn-outline btn-sm" style="padding: 5px 10px; font-size: 12px;" title="Reset all search and date filters">
+                🔄 Reset
+              </button>
+            </div>
+
+            <!-- EAT Nairobi Clock Indicator & Filtered Count -->
+            <div style="display: flex; align-items: center; gap: 10px; font-size: 12.5px;">
+              <span id="eat-live-clock" style="background: rgba(0, 135, 81, 0.1); color: var(--color-green-primary); padding: 4px 10px; border-radius: 999px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                🕒 EAT Nairobi
+              </span>
+              <span id="filtered-donations-badge" style="font-weight: 600; color: var(--text-muted);">
+                Showing 0 records
+              </span>
+            </div>
           </div>
+
         </div>
 
         <div class="table-responsive">
